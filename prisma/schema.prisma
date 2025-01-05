@@ -23,7 +23,7 @@ model User {
   id               String   @id @default(uuid())
   name             String
   email            String   @unique
-  password         String?
+  password         String
   photo            String?
   avatarPublicId   String?
   avatarUrl        String?
@@ -32,13 +32,14 @@ model User {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  friendsRequested Friendship[]      @relation("Requesters")
-  friendsReceived  Friendship[]      @relation("Receivers")
-  chats            Chat[]            @relation("UserChats")
-  sentMessages     Message[]         @relation("UserMessages")
-  notifications    Notification[]
-  createdGroups    Group[]           @relation("GroupAdmin")
-  groupMemberships GroupMembership[]
+  learningRequests LearningRequest[]
+  roommateRequests RoommateRequest[]
+  rideRequests     RideRequest[]
+  projects         Project[]          @relation("ProjectMembers")
+  ledProjects      Project[]          @relation("ProjectLeader")
+  chats            Chat[]             @relation("UserChats")
+  createdChats     Chat[]             @relation("ChatCreator")
+  messages         Message[]
 }
 
 enum Role {
@@ -46,133 +47,91 @@ enum Role {
   ADMIN
 }
 
-model Group {
-  id          String   @id @default(uuid())
-  name        String
-  description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  adminId       String
-  admin         User              @relation("GroupAdmin", fields: [adminId], references: [id])
-  groupType     GroupType
-  memberships   GroupMembership[]
-  projectGroup  ProjectGroup?
-  rideGroup     RideGroup?
-  roommateGroup RoommateGroup?
-}
-
-enum GroupType {
-  PROJECT
-  RIDE
-  ROOMMATE
-}
-
-model ProjectGroup {
-  groupId     String  @id
-  title       String
-  description String?
-  maxSize     Int
-  goal        String?
-
-  group       Group             @relation(fields: [groupId], references: [id])
-  memberships GroupMembership[]
-}
-
-model RideGroup {
-  groupId        String  @id
-  source         String
-  destination    String
-  totalPrice     Float
-  maxSize        Int
-  carName        String?
-  driverName     String?
-  prizePerPerson Float
-
-  group       Group             @relation(fields: [groupId], references: [id])
-  memberships GroupMembership[]
-}
-
-model RoommateGroup {
-  groupId       String  @id
-  location      String
+model LearningRequest {
+  id            String   @id @default(uuid())
+  title         String
+  description   String
+  creatorId     String
+  creator       User     @relation(fields: [creatorId], references: [id])
   maxSize       Int
   contactNumber String?
-
-  group       Group             @relation(fields: [groupId], references: [id])
-  memberships GroupMembership[]
+  project       Project? // No fields/references here
+  createdAt     DateTime @default(now())
 }
 
-model Friendship {
-  id          String           @id @default(uuid())
-  requesterId String
-  requester   User             @relation("Requesters", fields: [requesterId], references: [id])
-  receiverId  String
-  receiver    User             @relation("Receivers", fields: [receiverId], references: [id])
-  status      FriendshipStatus @default(PENDING)
-
-  createdAt DateTime @default(now())
-
-  @@unique([requesterId, receiverId])
+model Project {
+  id                String   @id @default(uuid())
+  name              String
+  description       String?
+  leaderId          String
+  leader            User     @relation("ProjectLeader", fields: [leaderId], references: [id])
+  members           User[]   @relation("ProjectMembers")
+  learningRequestId String?  @unique // Add `@unique` to enforce one-to-one relationship
+  learningRequest   LearningRequest? @relation(fields: [learningRequestId], references: [id], onDelete: Cascade)
+  goals             Goal[]
+  createdAt         DateTime @default(now())
 }
 
-enum FriendshipStatus {
-  PENDING
-  ACCEPTED
-  REJECTED
+
+
+model RoommateRequest {
+  id            String   @id @default(uuid())
+  pgName        String
+  description   String
+  creatorId     String
+  creator       User     @relation(fields: [creatorId], references: [id])
+  location      String
+  contactNumber String?
+  createdAt     DateTime @default(now())
+}
+
+model RideRequest {
+  id            String   @id @default(uuid())
+  source        String
+  destination   String
+  carName       String
+  pricePerPerson Float
+  creatorId     String
+  creator       User     @relation(fields: [creatorId], references: [id])
+  contactNumber String?
+  createdAt     DateTime @default(now())
+}
+
+model Goal {
+  id         String  @id @default(uuid())
+  content    String
+  completed  Boolean @default(false)
+  projectId  String
+  project    Project @relation(fields: [projectId], references: [id])
 }
 
 model Chat {
-  id        String    @id @default(uuid())
-  isGroup   Boolean   @default(false)
-  name      String?
-  users     User[]    @relation("UserChats")
-  messages  Message[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id          String   @id @default(uuid())
+  name        String
+  groupChat   Boolean  @default(false)
+  creatorId   String?
+  creator     User?    @relation("ChatCreator", fields: [creatorId], references: [id])
+  members     User[]   @relation("UserChats")
+  messages    Message[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Message {
-  id        String     @id @default(uuid())
-  content   String?
-  mediaUrl  String?
-  mediaType MediaType?
-  senderId  String
-  sender    User       @relation("UserMessages", fields: [senderId], references: [id])
-  chatId    String
-  chat      Chat       @relation(fields: [chatId], references: [id])
-  createdAt DateTime   @default(now())
+  id          String     @id @default(uuid())
+  content     String?
+  attachments Attachment[]
+  senderId    String
+  sender      User       @relation(fields: [senderId], references: [id])
+  chatId      String
+  chat        Chat       @relation(fields: [chatId], references: [id])
+  createdAt   DateTime   @default(now())
 }
 
-enum MediaType {
-  TEXT
-  IMAGE
-  VIDEO
-  AUDIO
-  DOCUMENT
-}
-
-model Notification {
-  id        String   @id @default(uuid())
-  content   String
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  isRead    Boolean  @default(false)
-  createdAt DateTime @default(now())
-}
-
-model GroupMembership {
-  userId          String
-  groupId         String
-  user            User           @relation(fields: [userId], references: [id])
-  group           Group          @relation(fields: [groupId], references: [id])
-  projectGroupId  String? // Nullable for non-project groups
-  projectGroup    ProjectGroup?  @relation(fields: [projectGroupId], references: [groupId])
-  rideGroupId     String? // Nullable for non-ride groups
-  rideGroup       RideGroup?     @relation(fields: [rideGroupId], references: [groupId])
-  roommateGroupId String? // Nullable for non-roommate groups
-  roommateGroup   RoommateGroup? @relation(fields: [roommateGroupId], references: [groupId])
-  createdAt       DateTime       @default(now())
-
-  @@id([userId, groupId])
+model Attachment {
+  id        String @id @default(uuid())
+  publicId  String
+  url       String
+  messageId String
+  message   Message @relation(fields: [messageId], references: [id])
 }
