@@ -1,16 +1,15 @@
 import { NextFunction, Request, Response } from "express";
 
 // types/userTypes.ts
-export type NewUserRequestBody = {
+// types/userTypes.ts
+export interface User {
+  id: string;
   name: string;
   email: string;
-  photo?: string; // Optional for Google users
-  avatarPublicId?: string; // Required for non-Google users
-  avatarUrl?: string; // Required for non-Google users
-  password?: string; // Required for non-Google users
-  isGoogleSignedIn: boolean;
-  role?: 'ADMIN' | 'USER'; // Optional, defaults to 'USER'
-};
+  imageUrl?: string;
+  clerkUserId: string;
+}
+
 
 
 export type ControllerType = (

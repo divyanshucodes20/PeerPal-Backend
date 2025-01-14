@@ -1,5 +1,5 @@
 {
-  "name": "ecommerce-backend",
+  "name": "peerpal-backend",
   "version": "1.0.0",
   "description": "",
   "main": "./dist/app.js",
@@ -13,7 +13,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@prisma/client": "^6.1.0",
+    "@clerk/express": "^1.3.33",
+    "@prisma/client": "^6.2.1",
     "@types/bcrypt": "^5.0.2",
     "bcrypt": "^5.1.1",
     "cloudinary": "^2.2.0",
@@ -26,9 +27,10 @@
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^6.9.16",
     "pg": "^8.13.1",
-    "prisma": "^6.1.0",
+    "prisma": "^6.2.1",
     "redis": "^4.7.0",
     "resend": "^4.0.1",
+    "socket.io": "^4.8.1",
     "stripe": "^16.12.0",
     "uuid": "^9.0.1",
     "validator": "^13.11.0"

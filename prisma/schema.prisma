@@ -3,9 +3,11 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
+
 
 model Contact {
   id        String   @id @default(uuid())
@@ -20,118 +22,134 @@ model Contact {
 }
 
 model User {
-  id               String   @id @default(uuid())
-  name             String
-  email            String   @unique
-  password         String
-  photo            String?
-  avatarPublicId   String?
-  avatarUrl        String?
-  isGoogleSignedIn Boolean  @default(false)
-  role             Role     @default(USER)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
+  id               String           @id @default(uuid())
+  clerkUserId      String           @unique // Clerk user ID
+  email            String           @unique
+  name             String?
+  imageUrl         String?
+  chats            Chat[] @relation("ChatMembers")
+  createdChats     Chat[]           @relation("CreatedChats")
+  messages         Message[]
   learningRequests LearningRequest[]
   roommateRequests RoommateRequest[]
   rideRequests     RideRequest[]
-  projects         Project[]          @relation("ProjectMembers")
-  ledProjects      Project[]          @relation("ProjectLeader")
-  chats            Chat[]             @relation("UserChats")
-  createdChats     Chat[]             @relation("ChatCreator")
-  messages         Message[]
-}
+  projects         Project[]
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 
-enum Role {
-  USER
-  ADMIN
-}
-
-model LearningRequest {
-  id            String   @id @default(uuid())
-  title         String
-  description   String
-  creatorId     String
-  creator       User     @relation(fields: [creatorId], references: [id])
-  maxSize       Int
-  contactNumber String?
-  project       Project? // No fields/references here
-  createdAt     DateTime @default(now())
-}
-
-model Project {
-  id                String   @id @default(uuid())
-  name              String
-  description       String?
-  leaderId          String
-  leader            User     @relation("ProjectLeader", fields: [leaderId], references: [id])
-  members           User[]   @relation("ProjectMembers")
-  learningRequestId String?  @unique // Add `@unique` to enforce one-to-one relationship
-  learningRequest   LearningRequest? @relation(fields: [learningRequestId], references: [id], onDelete: Cascade)
-  goals             Goal[]
-  createdAt         DateTime @default(now())
-}
-
-
-
-model RoommateRequest {
-  id            String   @id @default(uuid())
-  pgName        String
-  description   String
-  creatorId     String
-  creator       User     @relation(fields: [creatorId], references: [id])
-  location      String
-  contactNumber String?
-  createdAt     DateTime @default(now())
-}
-
-model RideRequest {
-  id            String   @id @default(uuid())
-  source        String
-  destination   String
-  carName       String
-  pricePerPerson Float
-  creatorId     String
-  creator       User     @relation(fields: [creatorId], references: [id])
-  contactNumber String?
-  createdAt     DateTime @default(now())
-}
-
-model Goal {
-  id         String  @id @default(uuid())
-  content    String
-  completed  Boolean @default(false)
-  projectId  String
-  project    Project @relation(fields: [projectId], references: [id])
+  @@map("users")
 }
 
 model Chat {
   id          String   @id @default(uuid())
   name        String
   groupChat   Boolean  @default(false)
-  creatorId   String?
-  creator     User?    @relation("ChatCreator", fields: [creatorId], references: [id])
-  members     User[]   @relation("UserChats")
+  creatorId   String
+  creator     User     @relation("CreatedChats", fields: [creatorId], references: [id])
+  members     User[]   @relation("ChatMembers")
   messages    Message[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@map("chats")
 }
 
 model Message {
-  id          String     @id @default(uuid())
+  id          String   @id @default(uuid())
   content     String?
   attachments Attachment[]
   senderId    String
-  sender      User       @relation(fields: [senderId], references: [id])
+  sender      User     @relation(fields: [senderId], references: [id])
   chatId      String
-  chat        Chat       @relation(fields: [chatId], references: [id])
-  createdAt   DateTime   @default(now())
+  chat        Chat     @relation(fields: [chatId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("messages")
 }
 
 model Attachment {
-  id        String @id @default(uuid())
-  publicId  String
-  url       String
-  messageId String
-  message   Message @relation(fields: [messageId], references: [id])
+  id          String   @id @default(uuid())
+  publicId    String
+  url         String
+  messageId   String
+  message     Message  @relation(fields: [messageId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("attachments")
+}
+
+model LearningRequest {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chatRoomId  String?  // Optional: Private chat room to communicate with the admin
+  subject     String
+  description String
+  space       Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@map("learningRequests")
+}
+
+model RoommateRequest {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chatRoomId  String   // Chat room created for private communication with the other user
+  address     String
+  rent        Float?
+  space       Int
+  description String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@map("roommateRequests")
+}
+
+model RideRequest {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chatRoomId  String   // Chat room created for private communication with the other user
+  costPerPerson Float
+  space       Int
+  description String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@map("rideRequests")
+}
+
+model Project {
+  id          String      @id @default(uuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  description String
+  isAdmin     Boolean     @default(false)
+  goals       Goal[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([userId])
+  @@map("projects")
+}
+
+model Goal {
+  id          String   @id @default(uuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  description String
+  isCompleted Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([projectId])
+  @@map("goals")
 }

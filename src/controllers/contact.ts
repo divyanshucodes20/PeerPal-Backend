@@ -1,9 +1,8 @@
-import { PrismaClient } from "@prisma/client";
 import { Request, Response } from "express";
 import nodemailer from "nodemailer";
 import { ContactRequestBody } from "../types/types.js";
+import { db } from "../utils/prismaClient.js";
 
-const prisma = new PrismaClient();
 
 export const submitContactForm = async (req: Request<{}, {}, ContactRequestBody>, res: Response) => {
   try {
@@ -15,7 +14,7 @@ export const submitContactForm = async (req: Request<{}, {}, ContactRequestBody>
     }
 
     // Save to the database
-    const newContact = await prisma.contact.create({
+    const newContact = await db.contact.create({
       data: {
         name,
         email,

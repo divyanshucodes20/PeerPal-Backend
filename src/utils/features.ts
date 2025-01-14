@@ -1,58 +1,45 @@
-import { UploadApiResponse, v2 as cloudinary } from "cloudinary";
+import {v2 as cloudinary } from "cloudinary";
 import { Redis } from "ioredis";
 import { redis} from "../app.js";
 import { InvalidateCacheProps} from "../types/types.js";
-
-export function base64ToFile(base64: string, filename: string): Express.Multer.File {
-  const buffer = Buffer.from(base64, 'base64');
-
-  // Define the file object
-  const file: Express.Multer.File = {
-    fieldname: filename,
-    originalname: filename,
-    encoding: 'base64',
-    mimetype: 'image/jpeg', // Set the appropriate mime type for the base64 string
-    buffer,
-    size: buffer.length,
-    stream: null as any, // The stream is not needed for your use case
-    destination: '', // You can leave it as an empty string since it's not used in this case
-    filename: filename,
-    path: '', // You can leave it as an empty string since it's not used
-  };
-
-  return file;
-}
+import { getBase64, getSockets } from "../lib/helper.js";
+import { v4 as uuid } from "uuid";
 
 
-export const uploadToCloudinary = async (files: (Express.Multer.File | string)[]) => {
-  const promises = files.map(async (file) => {
-    return new Promise<UploadApiResponse>((resolve, reject) => {
-      // Check if the input is a file or base64 string
-      if (typeof file === 'string') {
-        // Base64 string upload
-        cloudinary.uploader.upload(file, { resource_type: 'auto' }, (error, result) => {
+
+
+export const uploadFilesToCloudinary = async (files = []) => {
+  const uploadPromises = files.map((file) => {
+    return new Promise((resolve, reject) => {
+      cloudinary.uploader.upload(
+        getBase64(file),
+        {
+          resource_type: "auto",
+          public_id: uuid(),
+        },
+        (error, result) => {
           if (error) return reject(error);
-          resolve(result!);
-        });
-      } else {
-        // File buffer upload
-        cloudinary.uploader.upload_stream(
-          { resource_type: 'auto' }, // Automatically detect resource type (image/video, etc.)
-          (error, result) => {
-            if (error) return reject(error);
-            resolve(result!);
-          }
-        ).end(file.buffer); // Stream the file buffer to Cloudinary
-      }
+          resolve(result);
+        }
+      );
     });
   });
 
-  const result = await Promise.all(promises);
+  try {
+    const results = await Promise.all(uploadPromises);
 
-  return result.map((i) => ({
-    public_id: i.public_id,
-    url: i.secure_url,
-  }));
+    const formattedResults = results.map((result:any) => ({
+      public_id: result.public_id,
+      url: result.secure_url,
+    }));
+    return formattedResults;
+  } catch (err) {
+    if (err instanceof Error) {
+      throw new Error(`Error uploading files to cloudinary: ${err.message}`);
+    } else {
+      throw new Error(`Error uploading files to cloudinary: ${err}`);
+    }
+  }
 };
 
 export const deleteFromCloudinary = async (publicIds: string[]) => {
@@ -140,3 +127,26 @@ export const invalidateCache = async ({
 };
 
 
+interface EmitEventProps {
+  req: Express.Request;
+  event: string;
+  users: string[];
+  data: any;
+}
+
+declare global {
+  namespace Express {
+    interface Application {
+      get: (name: string) => any;
+    }
+    interface Request {
+      app: Application;
+    }
+  }
+}
+
+export const emitEvent = ({ req, event, users, data }: EmitEventProps) => {
+  const io = req.app.get("io");
+  const usersSocket = getSockets(users);
+  io.to(usersSocket).emit(event, data);
+};
