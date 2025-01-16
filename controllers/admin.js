@@ -6,6 +6,7 @@ import { User } from "../models/user.js";
 import { ErrorHandler } from "../utils/utility.js";
 import { cookieOptions } from "../utils/features.js";
 import { adminSecretKey } from "../app.js";
+import { Ride } from "../models/ride.js";
 
 const adminLogin = TryCatch(async (req, res, next) => {
   const { secretKey } = req.body;
@@ -74,6 +75,14 @@ const allUsers = TryCatch(async (req, res) => {
   });
 });
 
+const allRides = TryCatch(async (req, res) => {
+  const rides=await Ride.find({});
+  return res.status(200).json({
+    status: "success",
+    rides: rides,
+  });
+});
+
 const allChats = TryCatch(async (req, res) => {
   const chats = await Chat.find({})
     .populate("members", "name avatar")
@@ -137,12 +146,13 @@ const allMessages = TryCatch(async (req, res) => {
 });
 
 const getDashboardStats = TryCatch(async (req, res) => {
-  const [groupsCount, usersCount, messagesCount, totalChatsCount] =
+  const [groupsCount, usersCount, messagesCount, totalChatsCount,totalRidesCount] =
     await Promise.all([
       Chat.countDocuments({ groupChat: true }),
       User.countDocuments(),
       Message.countDocuments(),
       Chat.countDocuments(),
+      Ride.countDocuments(),
     ]);
 
   const today = new Date();
@@ -174,6 +184,7 @@ const getDashboardStats = TryCatch(async (req, res) => {
     messagesCount,
     totalChatsCount,
     messagesChart: messages,
+    totalRidesCount,
   };
 
   return res.status(200).json({
@@ -190,4 +201,5 @@ export {
   adminLogin,
   adminLogout,
   getAdminData,
+  allRides,
 };

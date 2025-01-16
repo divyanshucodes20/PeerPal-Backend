@@ -17,6 +17,13 @@ const schema = new Schema(
       required: true,
       select: false,
     },
+    otp:{
+       type: String,
+    },
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
     avatar: {
       public_id: {
         type: String,

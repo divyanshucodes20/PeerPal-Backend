@@ -3,6 +3,8 @@ import jwt from "jsonwebtoken";
 import { v4 as uuid } from "uuid";
 import { v2 as cloudinary } from "cloudinary";
 import { getBase64, getSockets } from "../lib/helper.js";
+import  {VerificationEmail}  from "../emails/verification.js" 
+import { resend } from "../app.js";
 
 const cookieOptions = {
   maxAge: 15 * 24 * 60 * 60 * 1000,
@@ -13,7 +15,7 @@ const cookieOptions = {
 
 const connectDB = (uri) => {
   mongoose
-    .connect(uri, { dbName: "Chattu" })
+    .connect(uri, { dbName: "PeerPal" })
     .then((data) => console.log(`Connected to DB: ${data.connection.host}`))
     .catch((err) => {
       throw err;
@@ -69,6 +71,26 @@ const uploadFilesToCloudinary = async (files = []) => {
 const deletFilesFromCloudinary = async (public_ids) => {
   // Delete files from cloudinary
 };
+export async function sendVerificationEmail(
+  email,
+  username,
+  verifyCode
+) {
+  try {
+    await resend.emails.send({
+      from: 'PeerPal<onboarding@divyanshucodings.live>',
+      to: email,
+      subject: 'PeerPal | verification code',
+      html:VerificationEmail({ username, otp: verifyCode }),
+    });
+    return { success: true, message: "email sent successfully" };
+  } catch (emailError) {
+    console.error("Error in sending verification email", emailError);
+    return { success: false, message: "failed to send verification email" };
+  }
+}
+
+
 
 export {
   connectDB,

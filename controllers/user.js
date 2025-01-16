@@ -9,6 +9,7 @@ import {
   cookieOptions,
   emitEvent,
   sendToken,
+  sendVerificationEmail,
   uploadFilesToCloudinary,
 } from "../utils/features.js";
 import { ErrorHandler } from "../utils/utility.js";
@@ -28,16 +29,49 @@ const newUser = TryCatch(async (req, res, next) => {
     url: result[0].url,
   };
 
+  const existingUser = await User.findOne({
+    email,
+  }); 
+
+  if (existingUser) return next(new ErrorHandler("User already exists", 400));
+
+  const otp= Math.floor(1000 + Math.random() * 9000);
   const user = await User.create({
     name,
     email,
     password,
     avatar,
+    otp,
   });
+  sendVerificationEmail(email,name,otp);
 
-  sendToken(res, user, 201, "User created");
+  return res.status(200).json({
+    success: true,
+    message: "User Created Successfully! Please verify your email to login",
+  })
 });
+const verifyOTP = TryCatch(async (req, res, next) => {
+  const { email, otp } = req.body;
 
+  const user = await User.findOne({ email });
+
+  if (!user) return next(new ErrorHandler("User not found!", 404));
+
+  if (user.isVerified) {
+    return res.status(400).json({ message: "User already verified!" });
+  }
+
+  if (user.otp !== otp) {
+    return next(new ErrorHandler("Invalid OTP!", 400));
+  }
+
+  // Mark user as verified
+  user.isVerified = true;
+  user.otp = null;
+  await user.save();
+
+  sendToken(res, user, 200, "Email verified! You can now log in.");
+});
 // Login user and save token in cookie
 const login = TryCatch(async (req, res, next) => {
   const { email, password } = req.body;
@@ -50,6 +84,9 @@ const login = TryCatch(async (req, res, next) => {
 
   if (!isMatch)
     return next(new ErrorHandler("Invalid Username or Password", 404));
+  if(!user.isVerified){
+    return next(new ErrorHandler("Please verify your email to login", 404));
+  }
 
   sendToken(res, user, 200, `Welcome Back, ${user.name}`);
 });
@@ -238,4 +275,5 @@ export {
   newUser,
   searchUser,
   sendFriendRequest,
+  verifyOTP
 };

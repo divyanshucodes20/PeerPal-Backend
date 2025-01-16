@@ -9,6 +9,7 @@ import {
   newUser,
   searchUser,
   sendFriendRequest,
+  verifyOTP,
 } from "../controllers/user.js";
 import {
   acceptRequestValidator,
@@ -19,11 +20,14 @@ import {
 } from "../lib/validators.js";
 import { isAuthenticated } from "../middlewares/auth.js";
 import { singleAvatar } from "../middlewares/multer.js";
+import { resendOTP } from "../controllers/auth.js";
 
 const app = express.Router();
 
 app.post("/new", singleAvatar, registerValidator(), validateHandler, newUser);
 app.post("/login", loginValidator(), validateHandler, login);
+app.post("/resend-otp", resendOTP);
+app.post("/verify", verifyOTP);
 
 // After here user must be logged in to access the routes
 
