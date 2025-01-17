@@ -17,6 +17,9 @@ const schema = new Schema(
     rent: {
         type: Number,
     },
+    contactNumber: {
+        type: Number,
+    },
   },
   {
     timestamps: true,

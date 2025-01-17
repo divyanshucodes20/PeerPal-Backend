@@ -5,6 +5,7 @@ import { v2 as cloudinary } from "cloudinary";
 import { getBase64, getSockets } from "../lib/helper.js";
 import  {VerificationEmail}  from "../emails/verification.js" 
 import { resend } from "../app.js";
+import {requestDeletionEmail} from "../emails/requestDeletion.js"
 
 const cookieOptions = {
   maxAge: 15 * 24 * 60 * 60 * 1000,
@@ -89,6 +90,26 @@ export async function sendVerificationEmail(
     return { success: false, message: "failed to send verification email" };
   }
 }
+export async function sendRequestDeletionEmail(
+  email,
+  requestType,
+  username,
+){
+  try {
+    await resend.emails.send({
+      from: 'PeerPal<alert@divyanshucodings.live>',
+      to: email,
+      subject: `Update on your ${requestType} request`,
+      html:requestDeletionEmail({ username, requestType }),
+    });
+    return { success: true, message: "email sent successfully" };
+}
+catch (emailError) {
+    console.error("Error in sending verification email", emailError);
+    return { success: false, message: "failed to send verification email" };
+}
+}
+
 
 
 

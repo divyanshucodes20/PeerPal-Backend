@@ -26,6 +26,8 @@ import {Resend} from "resend"
 import userRoute from "./routes/user.js";
 import chatRoute from "./routes/chat.js";
 import adminRoute from "./routes/admin.js";
+import rideRoute from "./routes/ride.js";
+import roommateRoute from "./routes/roommate.js";
 
 dotenv.config({
   path: "./.env",
@@ -64,6 +66,8 @@ app.use(cors(corsOptions));
 app.use("/api/v1/user", userRoute);
 app.use("/api/v1/chat", chatRoute);
 app.use("/api/v1/admin", adminRoute);
+app.use("/api/v1/ride", rideRoute);
+app.use("/api/v1/roommate", roommateRoute);
 
 app.get("/", (req, res) => {
   res.send("Hello World");

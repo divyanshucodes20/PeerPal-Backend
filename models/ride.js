@@ -30,6 +30,15 @@ const schema = new Schema(
         type: Date,
         default: Date.now,
     },
+    contactNumber:{
+        type: Number,
+    },
+    members: [
+        {
+            type: Types.ObjectId,
+            ref: "User",
+        },
+    ],
   },
   {
     timestamps: true,

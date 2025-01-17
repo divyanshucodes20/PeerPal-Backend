@@ -4,7 +4,11 @@ import {
   adminLogout,
   allChats,
   allMessages,
+  allRides,
+  allRoommates,
   allUsers,
+  deleteRideRequest,
+  deleteRoommateRequest,
   getAdminData,
   getDashboardStats,
 } from "../controllers/admin.js";
@@ -26,6 +30,10 @@ app.get("/", getAdminData);
 app.get("/users", allUsers);
 app.get("/chats", allChats);
 app.get("/messages", allMessages);
+app.get("/rides",allRides);
+app.get("/roommates",allRoommates);
+app.delete("/roommates/:id",deleteRoommateRequest);
+app.delete("/ride/:id",deleteRideRequest);
 
 app.get("/stats", getDashboardStats);
 

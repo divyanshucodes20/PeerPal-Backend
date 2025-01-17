@@ -21,6 +21,13 @@ const schema = new Schema(
         type: Boolean,
         default: false,
     },
+    contactNumber: {
+        type: Number,
+    },
+    isPublic:{
+      type:Boolean,
+      default:true
+    }
   },
   {
     timestamps: true,

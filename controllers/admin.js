@@ -4,9 +4,10 @@ import { Chat } from "../models/chat.js";
 import { Message } from "../models/message.js";
 import { User } from "../models/user.js";
 import { ErrorHandler } from "../utils/utility.js";
-import { cookieOptions } from "../utils/features.js";
+import { cookieOptions, sendRequestDeletionEmail } from "../utils/features.js";
 import { adminSecretKey } from "../app.js";
 import { Ride } from "../models/ride.js";
+import {Roommate} from "../models/roommate.js"
 
 const adminLogin = TryCatch(async (req, res, next) => {
   const { secretKey } = req.body;
@@ -83,6 +84,47 @@ const allRides = TryCatch(async (req, res) => {
   });
 });
 
+const allRoommates = TryCatch(async (req, res) => {
+  const roommates=await Roommate.find({});
+  return res.status(200).json({
+    status: "success",
+    roommates: roommates,
+  });
+});
+const deleteRideRequest=TryCatch(async(req,res)=>{
+  const {id}=req.params;
+  const ride=await Ride.findById(id);
+  if(!ride){
+    return next(new ErrorHandler("Ride Request Not Found",404));
+  }
+  const user=await User.findById(ride.creator);
+  if(!user){
+    return next(new ErrorHandler("User Not Found",404));
+  }
+  await sendRequestDeletionEmail(user.email,"Ride",user.name);
+  return res.status(200).json({
+    status: "success",
+    message: "Ride Request Deleted Successfully",
+  });
+});
+const deleteRoommateRequest=TryCatch(async(req,res)=>{
+  const {id}=req.params;
+  const roommate=await Roommate.findById(id);
+  if(!roommate){
+    return next(new ErrorHandler("Roommate Request Not Found",404));
+  }
+  const user=await User.findById(roommate.creator);
+  if(!user){
+    return next(new ErrorHandler("User Not Found",404));
+  }
+  await sendRequestDeletionEmail(user.email,"Roommate",user.name);
+  return res.status(200).json({
+    status: "success",
+    message: "Roommate Request Deleted Successfully",
+  });
+});
+
+
 const allChats = TryCatch(async (req, res) => {
   const chats = await Chat.find({})
     .populate("members", "name avatar")
@@ -146,13 +188,14 @@ const allMessages = TryCatch(async (req, res) => {
 });
 
 const getDashboardStats = TryCatch(async (req, res) => {
-  const [groupsCount, usersCount, messagesCount, totalChatsCount,totalRidesCount] =
+  const [groupsCount, usersCount, messagesCount, totalChatsCount,totalRidesCount,totalRoommateRequestCount] =
     await Promise.all([
       Chat.countDocuments({ groupChat: true }),
       User.countDocuments(),
       Message.countDocuments(),
       Chat.countDocuments(),
       Ride.countDocuments(),
+      Roommate.countDocuments()
     ]);
 
   const today = new Date();
@@ -185,6 +228,7 @@ const getDashboardStats = TryCatch(async (req, res) => {
     totalChatsCount,
     messagesChart: messages,
     totalRidesCount,
+    totalRoommateRequestCount
   };
 
   return res.status(200).json({
@@ -202,4 +246,7 @@ export {
   adminLogout,
   getAdminData,
   allRides,
+  allRoommates,
+  deleteRideRequest,
+  deleteRoommateRequest
 };
