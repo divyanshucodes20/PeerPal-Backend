@@ -17,17 +17,17 @@ const schema = new Schema(
     teamSize: {
       type: Number,
     },
-    isProject: {
-        type: Boolean,
-        default: false,
-    },
     contactNumber: {
         type: Number,
     },
     isPublic:{
       type:Boolean,
       default:true
-    }
+    },
+    members:[{
+      type:Types.ObjectId,
+      ref:"User"
+    }],
   },
   {
     timestamps: true,

@@ -1,6 +1,9 @@
+import { REFETCH_CHATS } from "../constants/events.js";
 import { TryCatch } from "../middlewares/error.js";
 import { Chat } from "../models/chat.js";
 import { Ride } from "../models/ride.js";
+import { User } from "../models/user.js";
+import { emitEvent, sendRequestDeletionEmailToMembers, sendRideFullMail, sendRideJoinedMail } from "../utils/features.js";
 import { ErrorHandler } from "../utils/utility.js";
 
 
@@ -75,6 +78,14 @@ const deleteRideRequest=TryCatch(async(req,res,next)=>{
     if(ride.creator.toString()!==req.user.toString()){
         return next(new ErrorHandler("You are not authorized to delete this ride",401));
     }
+    const members=ride.members;
+    if(members.length>0){
+        const user=await User.findById(ride.creator);
+        members.forEach(async(member)=>{
+            const otherUser=await User.findById(member);
+            sendRequestDeletionEmailToMembers(otherUser.email,"Ride",otherUser.name,user.name,ride.source+"to"+ride.destination);
+        })
+    }
     await ride.remove();
     res.status(200).json({
         success:true,
@@ -128,17 +139,38 @@ const joinRide=TryCatch(async(req,res,next)=>{
         creator:ride.creator,
         members:[ride.creator,userId]
     });
+    const memberIncludingCreator=[...ride.members,ride.creator];
+    emitEvent(req, REFETCH_CHATS,memberIncludingCreator);
+    const user=await User.findById(ride.creator);
+    if(ride.members.length===ride.seats){
+        sendRideFullMail(user.email,ride.source+"to"+ride.destination,user.name);
+    }
+    else{
+        const joiner=await User.findById(userId);
+        sendRideJoinedMail(user.email,user.name,joiner.name,ride.description,ride.date);
+    }
     return res.status(200).json({
         success:true,
         message:"Ride joined Successfully,You can now chat with the creator",
         data:ride
     });
 });
+
+const getAllUserJoinedRides=TryCatch(async(req,res,next)=>{
+    const userId=req.user;
+    const rides=await Ride.find({members:userId});
+    res.status(200).json({
+        success:true,
+        data:rides
+    })
+});
+
 export {
     newRideRequest,
     editRideRequest,
     deleteRideRequest,
     getRideRequest,
     getAllUserRides,
-    joinRide
+    joinRide,
+    getAllUserJoinedRides
 }

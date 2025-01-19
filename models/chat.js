@@ -20,6 +20,10 @@ const schema = new Schema(
         ref: "User",
       },
     ],
+    isProject:{
+      type:Boolean,
+      default:false
+    }
   },
   {
     timestamps: true,

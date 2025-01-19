@@ -3,10 +3,13 @@ import {
   adminLogin,
   adminLogout,
   allChats,
+  allLearners,
   allMessages,
+  allProjects,
   allRides,
   allRoommates,
   allUsers,
+  deleteLearnerRequest,
   deleteRideRequest,
   deleteRoommateRequest,
   getAdminData,
@@ -32,8 +35,11 @@ app.get("/chats", allChats);
 app.get("/messages", allMessages);
 app.get("/rides",allRides);
 app.get("/roommates",allRoommates);
+app.get("/learners",allLearners);
+app.get("/projects",allProjects);
 app.delete("/roommates/:id",deleteRoommateRequest);
 app.delete("/ride/:id",deleteRideRequest);
+app.delete("/learner/:id",deleteLearnerRequest);
 
 app.get("/stats", getDashboardStats);
 

@@ -10,6 +10,11 @@ const schema = new Schema(
       type: Types.ObjectId,
       ref: "User",
     },
+    type:{
+      type: String,
+      enum: ["group", "personal"],
+      default: "personal",
+    },
     members: [
       {
         type: Types.ObjectId,
@@ -22,6 +27,10 @@ const schema = new Schema(
         ref: "Goal",
       },
     ],
+    groupChat: {
+      type: Types.ObjectId,
+      ref: "Chat",
+    },
   },
   {
     timestamps: true,

@@ -18,6 +18,12 @@ const schema = new Schema(
         type: String,
         required: true,
     },
+   assignedTo:[
+        {
+            type:Types.ObjectId,
+            ref:"User",
+        }
+   ],
   },
   {
     timestamps: true,

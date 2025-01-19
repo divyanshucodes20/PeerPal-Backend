@@ -8,6 +8,8 @@ import { cookieOptions, sendRequestDeletionEmail } from "../utils/features.js";
 import { adminSecretKey } from "../app.js";
 import { Ride } from "../models/ride.js";
 import {Roommate} from "../models/roommate.js"
+import { Learner } from "../models/learner.js";
+import { Project } from "../models/project.js";
 
 const adminLogin = TryCatch(async (req, res, next) => {
   const { secretKey } = req.body;
@@ -91,6 +93,20 @@ const allRoommates = TryCatch(async (req, res) => {
     roommates: roommates,
   });
 });
+const allLearners = TryCatch(async (req, res) => {
+  const learners=await Learner.find({});
+  return res.status(200).json({
+    status: "success",
+    learners: learners,
+  });
+});
+const allProjects = TryCatch(async (req, res) => {
+  const projects=await Project.find({});
+  return res.status(200).json({
+    status: "success",
+    projects: projects,
+  });
+});
 const deleteRideRequest=TryCatch(async(req,res)=>{
   const {id}=req.params;
   const ride=await Ride.findById(id);
@@ -101,7 +117,7 @@ const deleteRideRequest=TryCatch(async(req,res)=>{
   if(!user){
     return next(new ErrorHandler("User Not Found",404));
   }
-  await sendRequestDeletionEmail(user.email,"Ride",user.name);
+  sendRequestDeletionEmail(user.email,"Ride",user.name);
   return res.status(200).json({
     status: "success",
     message: "Ride Request Deleted Successfully",
@@ -117,10 +133,26 @@ const deleteRoommateRequest=TryCatch(async(req,res)=>{
   if(!user){
     return next(new ErrorHandler("User Not Found",404));
   }
-  await sendRequestDeletionEmail(user.email,"Roommate",user.name);
+   sendRequestDeletionEmail(user.email,"Roommate",user.name);
   return res.status(200).json({
     status: "success",
     message: "Roommate Request Deleted Successfully",
+  });
+});
+const deleteLearnerRequest=TryCatch(async(req,res)=>{
+  const {id}=req.params;
+  const learner=await Learner.findById(id);
+  if(!learner){
+    return next(new ErrorHandler("Learner Request Not Found",404));
+  }
+  const user=await User.findById(learner.creator);
+  if(!user){
+    return next(new ErrorHandler("User Not Found",404));
+  }
+   sendRequestDeletionEmail(user.email,"Learner",user.name);
+  return res.status(200).json({
+    status: "success",
+    message: "Learner Request Deleted Successfully",
   });
 });
 
@@ -188,14 +220,15 @@ const allMessages = TryCatch(async (req, res) => {
 });
 
 const getDashboardStats = TryCatch(async (req, res) => {
-  const [groupsCount, usersCount, messagesCount, totalChatsCount,totalRidesCount,totalRoommateRequestCount] =
+  const [groupsCount, usersCount, messagesCount, totalChatsCount,totalRidesCount,totalRoommateRequestCount,totalLearnerRequest] =
     await Promise.all([
       Chat.countDocuments({ groupChat: true }),
       User.countDocuments(),
       Message.countDocuments(),
       Chat.countDocuments(),
       Ride.countDocuments(),
-      Roommate.countDocuments()
+      Roommate.countDocuments(),
+      Learner.countDocuments()
     ]);
 
   const today = new Date();
@@ -228,7 +261,8 @@ const getDashboardStats = TryCatch(async (req, res) => {
     totalChatsCount,
     messagesChart: messages,
     totalRidesCount,
-    totalRoommateRequestCount
+    totalRoommateRequestCount,
+    totalLearnerRequest
   };
 
   return res.status(200).json({
@@ -248,5 +282,8 @@ export {
   allRides,
   allRoommates,
   deleteRideRequest,
-  deleteRoommateRequest
+  deleteRoommateRequest,
+  deleteLearnerRequest,
+  allLearners,
+  allProjects
 };

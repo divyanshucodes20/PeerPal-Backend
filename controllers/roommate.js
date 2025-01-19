@@ -1,6 +1,9 @@
+import { REFETCH_CHATS } from "../constants/events.js";
 import { TryCatch } from "../middlewares/error.js";
 import { Chat } from "../models/chat.js";
 import { Roommate } from "../models/roommate.js";
+import { User } from "../models/user.js";
+import { emitEvent, sendRoommateJoinedMail } from "../utils/features.js";
 import { ErrorHandler } from "../utils/utility.js";
 
 
@@ -89,6 +92,14 @@ const getAllUserRoommateRequests=TryCatch(async(req,res,next)=>{
         data:roommates
     })
 });
+const getUserJoinedRoommateRequests=TryCatch(async(req,res,next)=>{
+    const userId=req.user;
+    const roommates=await Roommate.find({members:userId});
+    res.status(200).json({
+        success:true,
+        data:roommates
+    })
+});
 const joinRoommateRequest=TryCatch(async(req,res,next)=>{
     const {id}=req.params;
     const userId=req.user;
@@ -100,7 +111,11 @@ const joinRoommateRequest=TryCatch(async(req,res,next)=>{
         name:roommate.location+" Roommate Request",
         creator:roommate.creator,
         members:[roommate.creator,userId]
-    })
+    });
+    emitEvent(req,REFETCH_CHATS,[roommate.creator,userId]);
+    const user=await User.findById(roommate.creator);
+    const joiner=await User.findById(userId);
+    sendRoommateJoinedMail(user.email,user.name,joiner.name);
     res.status(200).json({
         success:true,
         message:"Successfully Joined Roommate Request You can now chat with the creator",
@@ -112,5 +127,6 @@ export {
     deleteRoommateRequest,
     getRoommateRequest,
     getAllUserRoommateRequests,
-    joinRoommateRequest
+    joinRoommateRequest,
+    getUserJoinedRoommateRequests,
 }

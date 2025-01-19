@@ -5,7 +5,8 @@ import { v2 as cloudinary } from "cloudinary";
 import { getBase64, getSockets } from "../lib/helper.js";
 import  {VerificationEmail}  from "../emails/verification.js" 
 import { resend } from "../app.js";
-import {requestDeletionEmail} from "../emails/requestDeletion.js"
+import {requestDeletionEmail,requestDeletionEmailByCreator} from "../emails/requestDeletion.js"
+import { learnerRequestFullEmail, newLearnerJoinedEmail, rideRequestJoinedEmail, rideSeatsFullEmail, roommateRequestJoinedEmail} from "../emails/seatsFull.js";
 
 const cookieOptions = {
   maxAge: 15 * 24 * 60 * 60 * 1000,
@@ -105,13 +106,130 @@ export async function sendRequestDeletionEmail(
     return { success: true, message: "email sent successfully" };
 }
 catch (emailError) {
-    console.error("Error in sending verification email", emailError);
-    return { success: false, message: "failed to send verification email" };
+    console.error("Error in sending updation email", emailError);
+    return { success: false, message: "failed to send updation email" };
 }
 }
-
-
-
+export async function sendRideFullMail(
+  email,
+  rideName,
+  creatorName,
+){
+  try {
+    await resend.emails.send({
+      from: 'PeerPal<alert@divyanshucodings.live>',
+      to: email,
+      subject: `Update on your Ride Request`,
+      html:rideSeatsFullEmail({rideName, creatorName }),
+    });
+    return { success: true, message: "email sent successfully" };
+}
+catch (emailError) {
+    console.error("Error in sending updation email", emailError);
+    return { success: false, message: "failed to send updation email" };
+}
+}
+export async function sendRideJoinedMail(
+  email,
+  creatorName,
+  joinerName,
+  rideDetails,
+  rideDate,
+){
+  try {
+    await resend.emails.send({
+      from: 'PeerPal<alert@divyanshucodings.live>',
+      to: email,
+      subject: `Update on your Ride Request`,
+      html:rideRequestJoinedEmail({creatorName, joinerName,rideDetails,rideDate}),
+    });
+    return { success: true, message: "email sent successfully" };
+}
+catch (emailError) {
+    console.error("Error in sending updation email", emailError);
+    return { success: false, message: "failed to send updation email" };
+}
+}
+export async function sendRoommateJoinedMail(
+  email,
+  creatorName,
+  joinerName,
+){
+  try {
+    await resend.emails.send({
+      from: 'PeerPal<alert@divyanshucodings.live>',
+      to: email,
+      subject: `Update on your Roommate Request`,
+      html:roommateRequestJoinedEmail({creatorName, joinerName}),
+    });
+    return { success: true, message: "email sent successfully" };
+}
+catch (emailError) {
+    console.error("Error in sending updation email", emailError);
+    return { success: false, message: "failed to send updation email" };
+}
+}
+export async function sendLearnerRequestFullMail(
+  email,
+  topic,
+  teamSize,
+  creatorName,
+){
+  try {
+    await resend.emails.send({
+      from: 'PeerPal<alert@divyanshucodings.live>',
+      to: email,
+      subject: `Update on your Learner Request`,
+      html:learnerRequestFullEmail({creatorName,topic,teamSize}),
+    });
+    return { success: true, message: "email sent successfully" };
+}
+catch (emailError) {
+    console.error("Error in sending updation email", emailError);
+    return { success: false, message: "failed to send updation email" };
+}
+}
+export async function sendLearnerJoinedMail(
+  email,
+  creatorName,
+  learnerName,
+  topic,
+){
+  try {
+    await resend.emails.send({
+      from: 'PeerPal<alert@divyanshucodings.live>',
+      to: email,
+      subject: `Update on your Learner Request`,
+      html:newLearnerJoinedEmail({creatorName, learnerName,topic}),
+    });
+    return { success: true, message: "email sent successfully" };
+}
+catch (emailError) {
+    console.error("Error in sending updation email", emailError);
+    return { success: false, message: "failed to send updation email" };
+}
+}
+export async function sendRequestDeletionEmailToMembers(
+  email,
+  requestType,
+  username,
+  creatorName,
+  requestName,
+){
+  try {
+    await resend.emails.send({
+      from: 'PeerPal<alert@divyanshucodings.live>',
+      to: email,
+      subject: `Update on your ${requestType} request`,
+      html:requestDeletionEmailByCreator({creatorName,requestName,username,requestType}),
+    });
+    return { success: true, message: "email sent successfully" };
+}
+catch (emailError) {
+    console.error("Error in sending updation email", emailError);
+    return { success: false, message: "failed to send updation email" };
+}
+}
 
 export {
   connectDB,
