@@ -8,7 +8,7 @@ app.use(isAuthenticated);
 app.post("/new",newRoommateRequest);
 app.get("/my",getAllUserRoommateRequests);
 app.get("/joined",getUserJoinedRoommateRequests);
-app.post("/join/:id",joinRoommateRequest);
+app.put("/join/:id",joinRoommateRequest);
 app.route("/:id").put(editRoommateRequest).delete(deleteRoommateRequest).get(getRoommateRequest);
 
 export default app;

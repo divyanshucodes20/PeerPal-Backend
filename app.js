@@ -29,6 +29,8 @@ import adminRoute from "./routes/admin.js";
 import rideRoute from "./routes/ride.js";
 import roommateRoute from "./routes/roommate.js";
 import learnerRoute from "./routes/learner.js";
+import ProjectRoute from "./routes/project.js";
+import GoalRoute from "./routes/goals.js";
 
 dotenv.config({
   path: "./.env",
@@ -70,6 +72,8 @@ app.use("/api/v1/admin", adminRoute);
 app.use("/api/v1/ride", rideRoute);
 app.use("/api/v1/roommate", roommateRoute);
 app.use("/api/v1/learner", learnerRoute);
+app.use("/api/v1/project", ProjectRoute);
+app.use("/api/v1/goal", GoalRoute);
 
 app.get("/", (req, res) => {
   res.send("Hello World");
@@ -157,4 +161,3 @@ server.listen(port, () => {
 });
 
 export { envMode, adminSecretKey, userSocketIDs };
-//learner me group chat ka system dekhna hai project ke routes banane hai aur chat me project ke hisaab se systme banana hai

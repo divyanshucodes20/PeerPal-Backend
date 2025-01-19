@@ -20,10 +20,6 @@ const schema = new Schema(
     contactNumber: {
         type: Number,
     },
-    isPublic:{
-      type:Boolean,
-      default:true
-    },
     members:[{
       type:Types.ObjectId,
       ref:"User"

@@ -7,7 +7,7 @@ import { emitEvent, sendLearnerJoinedMail, sendLearnerRequestFullMail } from "..
 
 
 const newLearnerRequest = TryCatch(async (req, res, next) => {
-    const { title,isProject,isPublic, teamSize, description,contactNumber } = req.body;
+    const { title,isProject,teamSize, description,contactNumber } = req.body;
 
    if(!title || !description){
         return next(new ErrorHandler("Title and Description are required",400));
@@ -22,23 +22,15 @@ const newLearnerRequest = TryCatch(async (req, res, next) => {
         title,
         teamSize,
         isProject,
-        isPublic
     };
     if (contactNumber) {
         rideData.contactNumber = contactNumber;
-    }
-    if(isProject){
-    const project=await Project.create({
-        name:title,
-        creator:req.user,
-        type:"group",
-    })
     }
     const learnerRequest = await Learner.create(learnerData);
 
     res.status(200).json({
         success: true,
-        message: "Learner Request Created Successfully ${isProject?`and Project Created`:``}",
+        message: `Learner Request Created Successfully ${isProject?`and Project Created When other user joined it automitically create one Project Group`:``}`,
     });
 });
 
@@ -51,7 +43,7 @@ const editLearnerRequest=TryCatch(async(req,res,next)=>{
     if(learner.creator.toString()!==req.user.toString()){
           return next(new ErrorHandler("You are not authorized to update this request",401));
     }
-    const { title,isProject,isPublic, teamSize, description,contactNumber } = req.body;
+    const { title,isProject,teamSize, description,contactNumber } = req.body;
     if(title)
     learner.title=title;
     if(description)
@@ -60,6 +52,7 @@ const editLearnerRequest=TryCatch(async(req,res,next)=>{
     learner.teamSize=teamSize;
     if(isProject){
     learner.isProject=isProject;
+    if(learner.members.length>=1){
     const chat=await Chat.create({
             members:learner.members,
             creator: req.user,
@@ -74,22 +67,21 @@ const editLearnerRequest=TryCatch(async(req,res,next)=>{
         members:learner.members,
         groupChat:chat._id,
     })
-    const memberIncludingCreator = [...members, project.creator];
+    const memberIncludingCreator = [...learner.members, project.creator];
         const user=await User.findById(req.user);
         emitEvent(req, REFETCH_CHATS, memberIncludingCreator,{
             message:`This is the project group created by ${user.name}`,
             chatId:chat._id,
-        }); 
+        });
+    } 
   }
-    if(isPublic)
-    learner.isPublic=isPublic;
     if(contactNumber)
     learner.contactNumber=contactNumber;
      
       await learner.save();
       res.status(200).json({
           success:true,
-          message:"Learner Request Updated Successfully",
+          message:`Learner Request Updated Successfully ${isProject?`and Project will created When Member Joined Become 2`:``}`,
       }) 
   })
   const deleteLearnerRequest=TryCatch(async(req,res,next)=>{
@@ -146,6 +138,28 @@ const editLearnerRequest=TryCatch(async(req,res,next)=>{
       }
       learner.members.push(userId);
       await learner.save();
+      if(learner.members.length==1 && learner.isProject){
+        const chat=await Chat.create({
+            members:learner.members,
+            creator: req.user,
+            groupChat: true,
+            name: learner.title + " Group",
+            isProject:true,
+        });
+        const project=await Project.create({
+            name:learner.title,
+            creator:learner.creator,
+            type:"group",
+            members:learner.members,
+            groupChat:chat._id,
+        })
+        const memberIncludingCreator = [...learner.members, project.creator];
+        const user=await User.findById(req.user);
+        emitEvent(req, REFETCH_CHATS, memberIncludingCreator,{
+            message:`This is the project group created by ${user.name}`,
+            chatId:chat._id,
+        });
+      }
       const newChat=await Chat.create({
           name:learner.title+" Chat",
           creator:learner.creator,

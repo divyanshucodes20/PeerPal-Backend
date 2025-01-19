@@ -8,7 +8,7 @@ app.use(isAuthenticated);
 app.post("/new",newLearnerRequest);
 app.get("/my",getAllUserLearnerRequests);
 app.get("/joined",getAllUserJoinedLearnerRequests);
-app.post("/join/:id",joinLearner);
+app.put("/join/:id",joinLearner);
 app.route("/:id").put(editLearnerRequest).delete(deleteLearnerRequest).get(getLearnerRequest);
 
 export default app;

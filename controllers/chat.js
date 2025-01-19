@@ -15,25 +15,35 @@ import {
 import { getOtherMember } from "../lib/helper.js";
 import { User } from "../models/user.js";
 import { Message } from "../models/message.js";
+import { Project } from "../models/project.js";
 
 const newGroupChat = TryCatch(async (req, res, next) => {
-  const { name, members } = req.body;
+  const { name, members,isProject } = req.body;
 
   const allMembers = [...members, req.user];
 
-  await Chat.create({
+  const chat=await Chat.create({
     name,
     groupChat: true,
     creator: req.user,
     members: allMembers,
+    isProject
   });
-
+   if(isProject){
+    const project=await Project.create({
+      name,
+      groupChat:chat._id,
+      creator:req.user,
+      members:allMembers,
+      type:"group"
+    })
+   }
   emitEvent(req, ALERT, allMembers, `Welcome to ${name} group`);
   emitEvent(req, REFETCH_CHATS, members);
 
   return res.status(201).json({
     success: true,
-    message: "Group Created",
+    message: `${isProject}?Project Group Created Successfully:Group Created Successfully`,
   });
 });
 
@@ -115,6 +125,12 @@ const addMembers = TryCatch(async (req, res, next) => {
     return next(new ErrorHandler("Group members limit reached", 400));
 
   await chat.save();
+  
+  if(chat.isProject){
+    const project=await Project.findById({groupChat:chatId});
+    project.members.push(...uniqueMembers);
+    await project.save();
+  }
 
   const allUsersName = allNewMembers.map((i) => i.name).join(", ");
 
@@ -157,7 +173,11 @@ const removeMember = TryCatch(async (req, res, next) => {
   chat.members = chat.members.filter(
     (member) => member.toString() !== userId.toString()
   );
-
+  if(chat.isProject){
+    const project=await Project.findById({groupChat:chatId});
+    project.members=project.members.filter(member=>member.toString()!==userId.toString());
+    await project.save();
+  }
   await chat.save();
 
   emitEvent(req, ALERT, chat.members, {
@@ -197,7 +217,11 @@ const leaveGroup = TryCatch(async (req, res, next) => {
   }
 
   chat.members = remainingMembers;
-
+  if(chat.isProject){
+    const project=await Project.find({groupChat:chatId});
+    project.members=remainingMembers;
+    await project.save();
+  }
   const [user] = await Promise.all([
     User.findById(req.user, "name"),
     chat.save(),
@@ -368,12 +392,15 @@ const deleteChat = TryCatch(async (req, res, next) => {
     chat.deleteOne(),
     Message.deleteMany({ chat: chatId }),
   ]);
-
+  if(chat.isProject){
+    const project=await Project.find({groupChat:chatId});
+    await project.deleteOne();
+  } 
   emitEvent(req, REFETCH_CHATS, members);
 
   return res.status(200).json({
     success: true,
-    message: "Chat deleted successfully",
+    message: `Chat ${chat.isProject}?as well as project deleted successfully: deleted successfully`,
   });
 });
 
@@ -430,6 +457,11 @@ const changeAdmin=TryCatch(
     }
 
     chat.creator=userId;
+    if(chat.isProject){
+      const project=await Project.findById({groupChat:chatId});
+      project.creator=userId;
+      await project.save();
+    }
     await chat.save();
     emitEvent(req,ALERT,chat.members,{
       message:`Admin has been changed to ${user.name}`,
@@ -438,7 +470,7 @@ const changeAdmin=TryCatch(
     emitEvent(req,REFETCH_CHATS,chat.members);
     return res.status(200).json({
       success:true,
-      message:"Admin changed successfully"
+      message:`${chat.isProject}?Project Creator as well as Group Admin Chnaged Successfully: Admin changed successfully`
     })
   }
 )
