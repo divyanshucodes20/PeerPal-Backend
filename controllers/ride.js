@@ -13,6 +13,10 @@ const newRideRequest = TryCatch(async (req, res, next) => {
     if (!source || !destination || !prizePerPerson || !seats || !description || !date) {
         return next(new ErrorHandler("Please provide all the required details", 400));
     }
+    const parsedDate = new Date(date);
+    if (isNaN(parsedDate.getTime())) {
+    return next(new ErrorHandler("Invalid Date format. Use YYYY-MM-DD.", 400));
+     }
     if(seats<=0){
         return next(new ErrorHandler("Total Seats should be greater than 0",400));
     }
@@ -83,10 +87,10 @@ const deleteRideRequest=TryCatch(async(req,res,next)=>{
         const user=await User.findById(ride.creator);
         members.forEach(async(member)=>{
             const otherUser=await User.findById(member);
-            sendRequestDeletionEmailToMembers(otherUser.email,"Ride",otherUser.name,user.name,ride.source+"to"+ride.destination);
+            sendRequestDeletionEmailToMembers(otherUser.email,"Ride",otherUser.name,user.name,ride.source+ "to" +ride.destination);
         })
     }
-    await ride.remove();
+    await Ride.deleteOne({_id:id});
     res.status(200).json({
         success:true,
         message:"Ride Request Deleted Successfully",
@@ -152,7 +156,6 @@ const joinRide=TryCatch(async(req,res,next)=>{
     return res.status(200).json({
         success:true,
         message:"Ride joined Successfully,You can now chat with the creator",
-        data:ride
     });
 });
 

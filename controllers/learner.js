@@ -1,9 +1,11 @@
+import { REFETCH_CHATS } from "../constants/events.js";
 import {TryCatch} from "../middlewares/error.js";
 import { Chat } from "../models/chat.js";
 import { Learner } from "../models/learner.js";
 import {Project} from "../models/project.js";
 import { User } from "../models/user.js";
 import { emitEvent, sendLearnerJoinedMail, sendLearnerRequestFullMail } from "../utils/features.js";
+import { ErrorHandler } from "../utils/utility.js";
 
 
 const newLearnerRequest = TryCatch(async (req, res, next) => {
@@ -50,6 +52,9 @@ const editLearnerRequest=TryCatch(async(req,res,next)=>{
     learner.description=description;
     if(teamSize)
     learner.teamSize=teamSize;
+    if(isProject===false){
+        return next(new ErrorHandler("You can't remove it from project",400));
+    }
     if(isProject){
     learner.isProject=isProject;
     if(learner.members.length>=1){
@@ -73,6 +78,10 @@ const editLearnerRequest=TryCatch(async(req,res,next)=>{
             message:`This is the project group created by ${user.name}`,
             chatId:chat._id,
         });
+    }
+    else{
+        learner.isProject=false;
+        return next(new ErrorHandler("Sorry,You can't create project without any member",400));
     } 
   }
     if(contactNumber)
@@ -93,7 +102,7 @@ const editLearnerRequest=TryCatch(async(req,res,next)=>{
       if(learner.creator.toString()!==req.user.toString()){
           return next(new ErrorHandler("You are not authorized to delete this request",401));
       }
-      await learner.remove();
+      await Learner.findByIdAndDelete(id);
       res.status(200).json({
           success:true,
           message:"Learner Request Deleted Successfully",
@@ -124,14 +133,14 @@ const editLearnerRequest=TryCatch(async(req,res,next)=>{
       if(!learner){
           return next(new ErrorHandler("Learner Request not found",404));
       }
+      if(learner.members.includes(userId)){
+        return next(new ErrorHandler("You have already joined this request",400));
+    }
       if(learner.members.length>=learner.teamSize){
           return next(new ErrorHandler("Sorry,the team is full now ",400));
       }
       if(learner.teamSize<=0){
           return next(new ErrorHandler("No seats available",400));
-      }
-      if(learner.members.includes(userId)){
-          return next(new ErrorHandler("You have already joined this request",400));
       }
       if(learner.creator===userId){
           return next(new ErrorHandler("You can't join your own request",400));
@@ -152,11 +161,37 @@ const editLearnerRequest=TryCatch(async(req,res,next)=>{
             type:"group",
             members:learner.members,
             groupChat:chat._id,
+            teamSize:learner.teamSize,
         })
         const memberIncludingCreator = [...learner.members, project.creator];
         const user=await User.findById(req.user);
         emitEvent(req, REFETCH_CHATS, memberIncludingCreator,{
             message:`This is the project group created by ${user.name}`,
+            chatId:chat._id,
+        });
+      }
+      else if(learner.members.length>1 && learner.isProject){
+        const project=await Project.findOne({members:learner.members,creator:learner.creator,type:"group",name:learner.title});
+        if(!project){
+            return next(new ErrorHandler("Project not found",404));
+        }
+        if(project.members.includes(userId)){
+            return next(new ErrorHandler("You have already joined this project",400));
+        }
+        if(project.members.length>=project.teamSize){
+            return next(new ErrorHandler("Sorry,the team is full now ",400));
+        }
+        const chat=await Chat.findById(project.groupChat);
+        if(!chat){
+            return next(new ErrorHandler("Chat not found",404));
+        }
+        chat.members.push(userId);
+        await chat.save();
+        project.members.push(userId);
+        await project.save();
+        const j=await User.findById(userId);
+        emitEvent(req, REFETCH_CHATS,[learner.creator,learner.members],{
+            message:`${j.name} has joined the project group`,
             chatId:chat._id,
         });
       }
@@ -177,7 +212,6 @@ const editLearnerRequest=TryCatch(async(req,res,next)=>{
       return res.status(200).json({
           success:true,
           message:"Learning Group joined Successfully,You can now chat with the creator",
-          data:ride
       });
   });
   

@@ -9,11 +9,14 @@ import { ErrorHandler } from "../utils/utility.js";
 
 const newProject=TryCatch(
     async (req, res,next) => {
-      const {name,type}=req.body;
+      const {name,type,teamSize}=req.body;
       if(!name){
         return next(new ErrorHandler("Please provide project name",400));
       }
       if (type === "group") {
+        if(!teamSize || teamSize<=0){
+            return next(new ErrorHandler("Total Seats should be greater than 0",400));
+        }
         const { members } = req.body;
         if (!members || members.length < 1) {
           return next(new ErrorHandler("Please provide members or create learning request as project to find members", 400));
@@ -33,7 +36,9 @@ const newProject=TryCatch(
           name: name + " Group",
           isProject:true,
         });
-        const project = await Project.create({ name, type, creator: req.user, members,groupChat:chat._id });
+        const project = await Project.create({ name, type, creator: req.user, members,groupChat:chat._id,
+          teamSize
+        });
         // Emit event with the created chat ID
         const memberIncludingCreator = [...members, project.creator];
         const user=await User.findById(req.user);
@@ -63,6 +68,10 @@ const editProject=TryCatch(async(req,res,next)=>{
         project.name=name;
     }
     if(type==="group"){
+        const {teamSize}=req.body;
+        if(teamSize<=0){
+          return next(new ErrorHandler("Total team size should be greater than 0",400));
+        }
         const {members}=req.body;
         if(!members || members.length<1){
           return next(new ErrorHandler("Please provide members or create learning request as project to find members",400));
@@ -158,6 +167,12 @@ const editProject=TryCatch(async(req,res,next)=>{
     if(project.creator.toString()!==req.user.toString()){
         return next(new ErrorHandler("You are not authorized to add members to this project",401));
     }
+    if(project.type!=="group"){
+        return next(new ErrorHandler("You can't add members to self project",400));
+    }
+    if(project.members.length>=project.teamSize){
+        return next(new ErrorHandler("Team is full you can edit project to increase team size",400));
+    }
     const {members}=req.body;
     if(!members || members.length<1){
         return next(new ErrorHandler("Please provide members to add",400));
@@ -190,6 +205,12 @@ const editProject=TryCatch(async(req,res,next)=>{
     }
     if(project.creator.toString()!==req.user.toString()){
         return next(new ErrorHandler("You are not authorized to remove members from this project",401));
+    }
+    if(project.type!=="group"){
+        return next(new ErrorHandler("You can't remove members from self project",400));
+    }
+    if(project.members.length<=1){
+        return next(new ErrorHandler("You can't remove all members from project",400));
     }
     const {member}=req.body;
     if(!member){

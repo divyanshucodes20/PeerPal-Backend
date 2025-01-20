@@ -49,9 +49,9 @@ const editRoommateRequest=TryCatch(async(req,res,next)=>{
     if(rent)
     roommate.rent=rent;
     if(description)
-    ride.description=description;
+    roommate.description=description;
     if(contactNumber)
-    ride.contactNumber=contactNumber
+    roommate.contactNumber=contactNumber
    
     await roommate.save();
     res.status(200).json({
@@ -68,7 +68,7 @@ const deleteRoommateRequest=TryCatch(async(req,res,next)=>{
     if(roommate.creator.toString()!==req.user.toString()){
         return next(new ErrorHandler("You are not authorized to delete this Roommate Request",403));
     }
-    await roommate.remove();
+    await Roommate.findByIdAndDelete(id);
     res.status(200).json({
         success:true,
         message:"Roommate Request Deleted Successfully",
@@ -92,14 +92,6 @@ const getAllUserRoommateRequests=TryCatch(async(req,res,next)=>{
         data:roommates
     })
 });
-const getUserJoinedRoommateRequests=TryCatch(async(req,res,next)=>{
-    const userId=req.user;
-    const roommates=await Roommate.find({members:userId});
-    res.status(200).json({
-        success:true,
-        data:roommates
-    })
-});
 const joinRoommateRequest=TryCatch(async(req,res,next)=>{
     const {id}=req.params;
     const userId=req.user;
@@ -107,13 +99,20 @@ const joinRoommateRequest=TryCatch(async(req,res,next)=>{
     if(!roommate){
         return next(new ErrorHandler("Roommate Request not found",404));
     }
+    if(roommate.creator.toString()===userId.toString()){
+        return next(new ErrorHandler("You are the creator of this Roommate Request",403));
+    }
+    const user=await User.findById(roommate.creator);
+    const existingChat=await Chat.findOne({members:[roommate.creator,userId]});
+    if(existingChat){
+        return next(new ErrorHandler(`You are already connected to ${user.name} you can directly connect him through chat`,403));
+    }
     const chat=await Chat.create({
         name:roommate.location+" Roommate Request",
         creator:roommate.creator,
         members:[roommate.creator,userId]
     });
     emitEvent(req,REFETCH_CHATS,[roommate.creator,userId]);
-    const user=await User.findById(roommate.creator);
     const joiner=await User.findById(userId);
     sendRoommateJoinedMail(user.email,user.name,joiner.name);
     res.status(200).json({
@@ -128,5 +127,4 @@ export {
     getRoommateRequest,
     getAllUserRoommateRequests,
     joinRoommateRequest,
-    getUserJoinedRoommateRequests,
 }

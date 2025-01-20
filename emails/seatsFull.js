@@ -37,7 +37,7 @@ export function roommateRequestJoinedEmail({ creatorName, joinerName}) {
                 <p>Great news! <strong>${joinerName}</strong> has joined your roommate request and is interested in connecting with you. 🤝</p>
                 
                 <p>
-                You can chat with him on the platform,Also if you find convinient roommate, please delete the request  from your dashboard to help us keep track of the requests and improve the platform for everyone.If not we will delete the ride after 7 days of completion.
+                You can chat with him on the platform,Also if you find convinient roommate, please delete the request  from your dashboard to help us keep track of the requests and improve the platform for everyone,else if you did not find a roommate you can extend the request.
                 </p>
                 
                 <p>You can now discuss preferences, living arrangements, and finalize your decision. Feel free to reach out to them at your convenience.</p>

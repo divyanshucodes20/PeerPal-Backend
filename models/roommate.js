@@ -19,7 +19,7 @@ const schema = new Schema(
     },
     contactNumber: {
         type: Number,
-    },
+    },  
   },
   {
     timestamps: true,

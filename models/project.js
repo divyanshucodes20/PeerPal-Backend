@@ -27,6 +27,10 @@ const schema = new Schema(
         ref: "Goal",
       },
     ],
+    teamSize:{
+      type: Number,
+      default: 1,
+    },
     groupChat: {
       type: Types.ObjectId,
       ref: "Chat",

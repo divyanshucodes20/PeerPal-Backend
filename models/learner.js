@@ -6,7 +6,7 @@ const schema = new Schema(
       type: String,
       required: true,
     },
-    decription: {
+    description: {
         type: String,
         required: true,
     },
@@ -24,6 +24,10 @@ const schema = new Schema(
       type:Types.ObjectId,
       ref:"User"
     }],
+    isProject: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
