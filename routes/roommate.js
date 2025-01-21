@@ -1,9 +1,10 @@
 import express from "express";
 import { isAuthenticated } from "../middlewares/auth.js";
-import {deleteRoommateRequest, editRoommateRequest, getAllUserRoommateRequests, getRoommateRequest, joinRoommateRequest, newRoommateRequest} from "../controllers/roommate.js"
+import {deleteRoommateRequest, editRoommateRequest, getAllRoommates, getAllUserRoommateRequests, getRoommateRequest, joinRoommateRequest, newRoommateRequest} from "../controllers/roommate.js"
 
 const app = express.Router();
 
+app.get("/all",getAllRoommates);
 app.use(isAuthenticated);
 app.post("/new",newRoommateRequest);
 app.get("/my",getAllUserRoommateRequests);

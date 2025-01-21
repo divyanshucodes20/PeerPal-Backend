@@ -1,9 +1,10 @@
 import express from "express";
 import { isAuthenticated } from "../middlewares/auth.js";
-import {deleteLearnerRequest, editLearnerRequest, getAllUserJoinedLearnerRequests, getAllUserLearnerRequests, getLearnerRequest, joinLearner, newLearnerRequest} from "../controllers/learner.js";
+import {deleteLearnerRequest, editLearnerRequest, getAllLearners, getAllUserJoinedLearnerRequests, getAllUserLearnerRequests, getLearnerRequest, joinLearner, newLearnerRequest} from "../controllers/learner.js";
 
 const app = express.Router();
 
+app.get("/all",getAllLearners)
 app.use(isAuthenticated);
 app.post("/new",newLearnerRequest);
 app.get("/my",getAllUserLearnerRequests);

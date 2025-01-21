@@ -7,7 +7,42 @@ import { User } from "../models/user.js";
 import { emitEvent, sendLearnerJoinedMail, sendLearnerRequestFullMail } from "../utils/features.js";
 import { ErrorHandler } from "../utils/utility.js";
 
-
+export const getAllLearners = TryCatch(
+    async (req, res, next) => {
+      const { search, sort, isProject } = req.query;
+      const page = Number(req.query.page) || 1;
+      const limit = Number(process.env.REQUEST_PER_PAGE) || 10;
+      const skip = (page - 1) * limit;
+  
+      const baseQuery= {};
+  
+      if (search)
+        baseQuery.description = {
+          $regex: search,
+          $options: "i",
+        };
+      if (isProject !== undefined) baseQuery.isProject = isProject;
+  
+      const learnersPromise = Learner.find(baseQuery)
+        .sort(sort && { teamSize: sort === "asc" ? 1 : -1 })
+        .limit(limit)
+        .skip(skip);
+  
+      const [learnersFetched, filteredOnlyLearners] = await Promise.all([
+        learnersPromise.populate("creator", "name avatar"),
+        Learner.find(baseQuery).populate("creator", "name avatar"),
+      ]);
+  
+      const totalPage = Math.ceil(filteredOnlyLearners.length / limit);
+  
+      return res.status(200).json({
+        success: true,
+        learners: learnersFetched,
+        totalPage,
+      });
+    }
+  );
+  
 const newLearnerRequest = TryCatch(async (req, res, next) => {
     const { title,isProject,teamSize, description,contactNumber } = req.body;
 
@@ -58,8 +93,9 @@ const editLearnerRequest=TryCatch(async(req,res,next)=>{
     if(isProject){
     learner.isProject=isProject;
     if(learner.members.length>=1){
+    const allMembers=[learner.creator,...learner.members];
     const chat=await Chat.create({
-            members:learner.members,
+            members:allMembers,
             creator: req.user,
             groupChat: true,
             name: learner.title + " Group",
@@ -71,6 +107,8 @@ const editLearnerRequest=TryCatch(async(req,res,next)=>{
         type:"group",
         members:learner.members,
         groupChat:chat._id,
+        learnerId:id,
+        teamSize,
     })
     const memberIncludingCreator = [...learner.members, project.creator];
         const user=await User.findById(req.user);
@@ -102,6 +140,12 @@ const editLearnerRequest=TryCatch(async(req,res,next)=>{
       if(learner.creator.toString()!==req.user.toString()){
           return next(new ErrorHandler("You are not authorized to delete this request",401));
       }
+      if(learner.isProject){
+        const project=await Project.findOne({learnerId:id});
+        if(project){
+            project.learnerId=null;
+        }
+      }
       await Learner.findByIdAndDelete(id);
       res.status(200).json({
           success:true,
@@ -110,7 +154,7 @@ const editLearnerRequest=TryCatch(async(req,res,next)=>{
   })
   const getLearnerRequest=TryCatch(async(req,res,next)=>{
       const id=req.params.id;
-      const learner=await Learner.findById(id);
+      const learner=await Learner.findById(id).populate("creator","name avatar");
       if(!learner){
           return next(new ErrorHandler("Learner Request not found",404));
       }
@@ -148,8 +192,9 @@ const editLearnerRequest=TryCatch(async(req,res,next)=>{
       learner.members.push(userId);
       await learner.save();
       if(learner.members.length==1 && learner.isProject){
+        const allMembers=[learner.creator,...learner.members];
         const chat=await Chat.create({
-            members:learner.members,
+            members:allMembers,
             creator: req.user,
             groupChat: true,
             name: learner.title + " Group",
@@ -162,6 +207,7 @@ const editLearnerRequest=TryCatch(async(req,res,next)=>{
             members:learner.members,
             groupChat:chat._id,
             teamSize:learner.teamSize,
+            learnerId:id,
         })
         const memberIncludingCreator = [...learner.members, project.creator];
         const user=await User.findById(req.user);
@@ -195,12 +241,15 @@ const editLearnerRequest=TryCatch(async(req,res,next)=>{
             chatId:chat._id,
         });
       }
+      const existingChat=await Chat.findOne({members:[learner.creator,userId],groupChat:false});
+      if(!existingChat){
       const newChat=await Chat.create({
           name:learner.title+" Chat",
           creator:learner.creator,
           members:[learner.creator,userId]
       });
       emitEvent(req, REFETCH_CHATS,learner.members);
+    }
       const user=await User.findById(learner.creator);
       if(learner.members.length===learner.teamSize){
           sendLearnerRequestFullMail(user.email,learner.title,learner.teamSize,user.name);
@@ -231,5 +280,6 @@ deleteLearnerRequest,
 getLearnerRequest,
 getAllUserLearnerRequests,
 getAllUserJoinedLearnerRequests,
-joinLearner
+joinLearner,
+getAllLearners
 }

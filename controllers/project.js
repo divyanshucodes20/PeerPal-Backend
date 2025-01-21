@@ -1,9 +1,10 @@
 import { REFETCH_CHATS } from "../constants/events.js";
 import {TryCatch} from "../middlewares/error.js"
 import { Chat } from "../models/chat.js";
+import { Learner } from "../models/learner.js";
 import { Project } from "../models/project.js";
 import { User } from "../models/user.js";
-import { emitEvent } from "../utils/features.js";
+import { emitEvent, sendRequestDeletionEmailToMembers } from "../utils/features.js";
 import { ErrorHandler } from "../utils/utility.js";
 
 
@@ -15,7 +16,7 @@ const newProject=TryCatch(
       }
       if (type === "group") {
         if(!teamSize || teamSize<=0){
-            return next(new ErrorHandler("Total Seats should be greater than 0",400));
+            return next(new ErrorHandler("Total Team Size should be greater than 0",400));
         }
         const { members } = req.body;
         if (!members || members.length < 1) {
@@ -28,9 +29,10 @@ const newProject=TryCatch(
             return next(new ErrorHandler("User not found", 404));
           }
         }
+        const allMembers = [...members, req.user];
         // Create the group chat
         const chat = await Chat.create({
-          members,
+          members: allMembers,
           creator: req.user,
           groupChat: true,
           name: name + " Group",
@@ -63,14 +65,25 @@ const editProject=TryCatch(async(req,res,next)=>{
     if(project.creator.toString()!==req.user.toString()){
           return next(new ErrorHandler("You are not authorized to update this project",401));
     }
-    const {name,type}=req.body;
+    const {name,type,teamSize}=req.body;
     if(name){
         project.name=name;
     }
+    if(project.type==="group" && teamSize){
+      if(project.members.length>teamSize){
+        return next(new ErrorHandler("Team size can't be less than current members",400));
+      }
+      if(teamSize<=0){
+        return next(new ErrorHandler("Total team size should be greater than 0",400));
+      }
+        project.teamSize=teamSize;
+    }
     if(type==="group"){
-        const {teamSize}=req.body;
         if(teamSize<=0){
           return next(new ErrorHandler("Total team size should be greater than 0",400));
+        }
+        if(project.type==="group"){
+          return next(new ErrorHandler("Project is already group type",400));
         }
         const {members}=req.body;
         if(!members || members.length<1){
@@ -98,6 +111,9 @@ const editProject=TryCatch(async(req,res,next)=>{
                 chatId:chat._id,
             });   
     }
+    else if(type==="personal"){
+      return next(new ErrorHandler("You can't change project type to personal",400));
+    }
     await project.save();
       res.status(200).json({
           success:true,
@@ -123,9 +139,11 @@ const editProject=TryCatch(async(req,res,next)=>{
                 })
             }
       }
-      const chat = await Chat.findById(project.groupChat);
-      await chat.remove();
-      await project.remove();
+      const chat = await Chat.findByIdAndDelete(project.groupChat);
+      if(project.learnerId){
+      const learnerRequest=await Learner.findByIdAndDelete(project.learnerId);
+      }
+      await Project.findByIdAndDelete(id);
       res.status(200).json({
           success:true,
           message:"Project and its Group Deleted Successfully",
@@ -133,7 +151,7 @@ const editProject=TryCatch(async(req,res,next)=>{
   })
   const getProjectDetails=TryCatch(async(req,res,next)=>{
       const id=req.params.id;
-      const project=await Project.findById(id);
+      const project=await Project.findById(id).populate("creator","name avatar").populate("members","name avatar");
       if(!project){
           return next(new ErrorHandler("Project not found",404));
       }
@@ -152,7 +170,7 @@ const editProject=TryCatch(async(req,res,next)=>{
   
   const getAllUserJoinedProjects=TryCatch(async(req,res,next)=>{
       const userId=req.user;
-      const projects=await Project.find({members:userId});
+      const projects=await Project.find({members:userId}).populate("creator","name avatar").populate("members","name avatar");
       res.status(200).json({
           success:true,
           data:projects

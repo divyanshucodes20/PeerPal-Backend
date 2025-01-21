@@ -35,6 +35,10 @@ const schema = new Schema(
       type: Types.ObjectId,
       ref: "Chat",
     },
+    learnerId:{
+      type: Types.ObjectId,
+      ref: "Learner",
+    },
   },
   {
     timestamps: true,

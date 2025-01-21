@@ -19,6 +19,7 @@ const schema = new Schema(
     },
     otp:{
        type: String,
+       select: false
     },
     isVerified: {
       type: Boolean,

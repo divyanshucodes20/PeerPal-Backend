@@ -41,6 +41,53 @@ const newRideRequest = TryCatch(async (req, res, next) => {
     });
 });
 
+export const getAllRideRequests = TryCatch(
+    async (req, res, next) => {
+      const { search, sort, source, destination, prizePerPerson, date } = req.query;
+      const page = Number(req.query.page) || 1;
+      const limit = Number(process.env.REQUEST_PER_PAGE) || 10;
+      const skip = (page - 1) * limit;
+  
+      const baseQuery= {};
+  
+      if (search)
+        baseQuery.description = {
+          $regex: search,
+          $options: "i",
+        };
+  
+      if (source) baseQuery.source = source;
+      if (destination) baseQuery.destination = destination;
+      if (prizePerPerson)
+        baseQuery.prizePerPerson = {
+          $lte: Number(prizePerPerson),
+        };
+      if (date)
+        baseQuery.date = {
+          $gte: new Date(date),
+        };
+  
+      const rideRequestsPromise = Ride.find(baseQuery)
+        .sort(sort && { prizePerPerson: sort === "asc" ? 1 : -1 })
+        .limit(limit)
+        .skip(skip);
+  
+      const [rideRequestsFetched, filteredOnlyRideRequests] = await Promise.all([
+        rideRequestsPromise,
+        Ride.find(baseQuery),
+      ]);
+  
+      const totalPage = Math.ceil(filteredOnlyRideRequests.length / limit);
+  
+      return res.status(200).json({
+        success: true,
+        rideRequests: rideRequestsFetched,
+        totalPage,
+      });
+    }
+);
+  
+  
 
 const editRideRequest=TryCatch(async(req,res,next)=>{
   const {id}=req.params;
@@ -98,7 +145,7 @@ const deleteRideRequest=TryCatch(async(req,res,next)=>{
 })
 const getRideRequest=TryCatch(async(req,res,next)=>{
     const id=req.params.id;
-    const ride=await Ride.findById(id);
+    const ride=await Ride.findById(id).populate("creator","name avatar").populate("members","name avatar");
     if(!ride){
         return next(new ErrorHandler("Ride Request not found",404));
     }
@@ -138,6 +185,8 @@ const joinRide=TryCatch(async(req,res,next)=>{
     }
     ride.members.push(userId);
     await ride.save();
+    const existingChat=await Chat.findOne({members:[ride.creator,userId],groupChat:false});
+    if(!existingChat){
     const newChat=await Chat.create({
         name:ride.source+"to"+ride.destination+"("+ride.date+")",
         creator:ride.creator,
@@ -145,6 +194,7 @@ const joinRide=TryCatch(async(req,res,next)=>{
     });
     const memberIncludingCreator=[...ride.members,ride.creator];
     emitEvent(req, REFETCH_CHATS,memberIncludingCreator);
+  }
     const user=await User.findById(ride.creator);
     if(ride.members.length===ride.seats){
         sendRideFullMail(user.email,ride.source+"to"+ride.destination,user.name);
@@ -175,5 +225,6 @@ export {
     getRideRequest,
     getAllUserRides,
     joinRide,
-    getAllUserJoinedRides
+    getAllUserJoinedRides,
+    getAllRideRequests,
 }
