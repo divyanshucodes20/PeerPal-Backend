@@ -41,7 +41,7 @@ const newRideRequest = TryCatch(async (req, res, next) => {
     });
 });
 
-export const getAllRideRequests = TryCatch(
+const getAllRideRequests = TryCatch(
     async (req, res, next) => {
       const { search, sort, source, destination, prizePerPerson, date } = req.query;
       const page = Number(req.query.page) || 1;

@@ -7,7 +7,7 @@ import { emitEvent, sendRoommateJoinedMail } from "../utils/features.js";
 import { ErrorHandler } from "../utils/utility.js";
 
 
-export const getAllRoommates = TryCatch(
+const getAllRoommates = TryCatch(
     async (req, res, next) => {
       const { search, sort} = req.query;
       const page = Number(req.query.page) || 1;

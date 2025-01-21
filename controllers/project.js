@@ -1,10 +1,11 @@
 import { REFETCH_CHATS } from "../constants/events.js";
 import {TryCatch} from "../middlewares/error.js"
 import { Chat } from "../models/chat.js";
+import { Goal } from "../models/goal.js";
 import { Learner } from "../models/learner.js";
 import { Project } from "../models/project.js";
 import { User } from "../models/user.js";
-import { emitEvent, sendRequestDeletionEmailToMembers } from "../utils/features.js";
+import { emitEvent, generateProjectSuggestions, sendRequestDeletionEmailToMembers } from "../utils/features.js";
 import { ErrorHandler } from "../utils/utility.js";
 
 
@@ -243,6 +244,26 @@ const editProject=TryCatch(async(req,res,next)=>{
         chatId:chat._id,
     });
   });
+const getProjectSuggestions = TryCatch(async (req, res, next) => {
+    const { projectId } = req.body;
+    if (!projectId) {
+      return res.status(400).json({ success: false, message: "Project ID is required." });
+    }
+  
+    const project = await Project.findById(projectId).populate("members").populate("goals");
+    if (!project) {
+      return res.status(404).json({ success: false, message: "Project not found." });
+    }
+  
+    const goals = await Goal.find({ project: projectId });
+    const suggestions = await generateProjectSuggestions(project, goals);
+  
+    return res.status(200).json({
+      success: true,
+      suggestions,
+    });
+  });
+  
 export {
     newProject,
     editProject,
@@ -251,5 +272,6 @@ export {
     getAllUserProjects,
     getAllUserJoinedProjects,
     addMembersToProject,
-    removeMemberFromProject
+    removeMemberFromProject,
+    getProjectSuggestions
 }

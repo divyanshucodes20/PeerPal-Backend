@@ -7,6 +7,7 @@ import  {VerificationEmail}  from "../emails/verification.js"
 import { resend } from "../app.js";
 import {requestDeletionEmail,requestDeletionEmailByCreator} from "../emails/requestDeletion.js"
 import { learnerRequestFullEmail, newLearnerJoinedEmail, rideRequestJoinedEmail, rideSeatsFullEmail, roommateRequestJoinedEmail} from "../emails/seatsFull.js";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const cookieOptions = {
   maxAge: 15 * 24 * 60 * 60 * 1000,
@@ -69,9 +70,17 @@ const uploadFilesToCloudinary = async (files = []) => {
     throw new Error("Error uploading files to cloudinary", err);
   }
 };
+export const deleteFromCloudinary = async (publicIds) => {
+  const promises = publicIds.map((id) => {
+    return new Promise((resolve, reject) => {
+      cloudinary.uploader.destroy(id, (error, result) => {
+        if (error) return reject(error);
+        resolve();
+      });
+    });
+  });
 
-const deletFilesFromCloudinary = async (public_ids) => {
-  // Delete files from cloudinary
+  await Promise.all(promises);
 };
 export async function sendVerificationEmail(
   email,
@@ -231,11 +240,52 @@ catch (emailError) {
 }
 }
 
+export async function generateProjectSuggestions(project, goals) {
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+  const prompt = `
+    Analyze this project and its goals, and provide 3 concise, actionable suggestions.
+    Focus on project goals, current progress, team collaboration, and areas of improvement.
+    Keep it friendly and constructive.
+
+    Project Details:
+    - Name: ${project.name}
+    - Type: ${project.type}
+    - Team Size: ${project.teamSize}
+    - Creator: ${project.creator}
+    - Members: ${project.members.length}
+    - Group Chat: ${project.groupChat ? "Enabled" : "Not Available"}
+    - Learner ID: ${project.learnerId}
+
+    Goals:
+    ${goals.map((goal, index) => `Goal ${index + 1}: ${goal.title} - ${goal.description} (Completed: ${goal.completed})`).join("\n")}
+
+    Format the response as a JSON array of strings, like this:
+    ["suggestion 1", "suggestion 2", "suggestion 3"]
+  `;
+
+  try {
+    const result = await model.generateContent(prompt);
+    const response = result.response;
+    const text = response.text();
+    const cleanedText = text.replace(/```(?:json)?\n?/g, "").trim();
+
+    return JSON.parse(cleanedText);
+  } catch (error) {
+    console.error("Error generating project suggestions:", error);
+    return [
+      "Ensure the team is aligned with project goals and deadlines.",
+      "Identify and address key challenges early to prevent delays.",
+      "Regularly review progress to stay on track with milestones.",
+    ];
+  }
+}
+
 export {
   connectDB,
   sendToken,
   cookieOptions,
   emitEvent,
-  deletFilesFromCloudinary,
   uploadFilesToCloudinary,
 };

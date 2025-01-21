@@ -7,7 +7,7 @@ import { User } from "../models/user.js";
 import { emitEvent, sendLearnerJoinedMail, sendLearnerRequestFullMail } from "../utils/features.js";
 import { ErrorHandler } from "../utils/utility.js";
 
-export const getAllLearners = TryCatch(
+const getAllLearners = TryCatch(
     async (req, res, next) => {
       const { search, sort, isProject } = req.query;
       const page = Number(req.query.page) || 1;
