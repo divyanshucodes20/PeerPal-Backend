@@ -73,7 +73,7 @@ const allUsers = TryCatch(async (req, res) => {
   );
 
   return res.status(200).json({
-    status: "success",
+    success: true,
     users: transformedUsers,
   });
 });
@@ -81,7 +81,7 @@ const allUsers = TryCatch(async (req, res) => {
 const allRides = TryCatch(async (req, res) => {
   const rides=await Ride.find({});
   return res.status(200).json({
-    status: "success",
+    success: true,
     rides: rides,
   });
 });
@@ -89,21 +89,21 @@ const allRides = TryCatch(async (req, res) => {
 const allRoommates = TryCatch(async (req, res) => {
   const roommates=await Roommate.find({});
   return res.status(200).json({
-    status: "success",
+    success: true,
     roommates: roommates,
   });
 });
 const allLearners = TryCatch(async (req, res) => {
   const learners=await Learner.find({});
   return res.status(200).json({
-    status: "success",
+    success: true,
     learners: learners,
   });
 });
 const allProjects = TryCatch(async (req, res) => {
   const projects=await Project.find({});
   return res.status(200).json({
-    status: "success",
+    success: true,
     projects: projects,
   });
 });
@@ -119,7 +119,7 @@ const deleteRideRequest=TryCatch(async(req,res)=>{
   }
   sendRequestDeletionEmail(user.email,"Ride",user.name);
   return res.status(200).json({
-    status: "success",
+    success: true,
     message: "Ride Request Deleted Successfully",
   });
 });
@@ -135,7 +135,7 @@ const deleteRoommateRequest=TryCatch(async(req,res)=>{
   }
    sendRequestDeletionEmail(user.email,"Roommate",user.name);
   return res.status(200).json({
-    status: "success",
+    success: true,
     message: "Roommate Request Deleted Successfully",
   });
 });
@@ -151,7 +151,7 @@ const deleteLearnerRequest=TryCatch(async(req,res)=>{
   }
    sendRequestDeletionEmail(user.email,"Learner",user.name);
   return res.status(200).json({
-    status: "success",
+    success: true,
     message: "Learner Request Deleted Successfully",
   });
 });
@@ -187,7 +187,7 @@ const allChats = TryCatch(async (req, res) => {
   );
 
   return res.status(200).json({
-    status: "success",
+    success: true,
     chats: transformedChats,
   });
 });

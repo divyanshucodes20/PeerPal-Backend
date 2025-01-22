@@ -73,15 +73,15 @@ const getAllRideRequests = TryCatch(
         .skip(skip);
   
       const [rideRequestsFetched, filteredOnlyRideRequests] = await Promise.all([
-        rideRequestsPromise,
-        Ride.find(baseQuery),
+        rideRequestsPromise.populate("creator", "name avatar"),
+        Ride.find(baseQuery).populate("creator", "name avatar"),
       ]);
   
       const totalPage = Math.ceil(filteredOnlyRideRequests.length / limit);
   
       return res.status(200).json({
         success: true,
-        rideRequests: rideRequestsFetched,
+        rides: rideRequestsFetched,
         totalPage,
       });
     }
@@ -151,14 +151,14 @@ const getRideRequest=TryCatch(async(req,res,next)=>{
     }
     res.status(200).json({
         success:true,
-        data:ride
+        ride:ride
     })
 });
 const getAllUserRides=TryCatch(async(req,res,next)=>{
     const rides=await Ride.find({creator:req.user});
     res.status(200).json({
         success:true,
-        data:rides
+        rides:rides
     })
 });
 const joinRide=TryCatch(async(req,res,next)=>{
