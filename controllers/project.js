@@ -1,4 +1,5 @@
 import { REFETCH_CHATS } from "../constants/events.js";
+import { getOtherMember } from "../lib/helper.js";
 import {TryCatch} from "../middlewares/error.js"
 import { Chat } from "../models/chat.js";
 import { Goal } from "../models/goal.js";
@@ -274,17 +275,17 @@ const editProject=TryCatch(async(req,res,next)=>{
     });
   });
 const getProjectSuggestions = TryCatch(async (req, res, next) => {
-    const { projectId } = req.body;
-    if (!projectId) {
+    const { id } = req.params;
+    if (!id) {
       return res.status(400).json({ success: false, message: "Project ID is required." });
     }
   
-    const project = await Project.findById(projectId).populate("members").populate("goals");
+    const project = await Project.findById(id).populate("members").populate("goals");
     if (!project) {
       return res.status(404).json({ success: false, message: "Project not found." });
     }
   
-    const goals = await Goal.find({ project: projectId });
+    const goals = await Goal.find({ project: id });
     const suggestions = await generateProjectSuggestions(project, goals);
   
     return res.status(200).json({
@@ -292,7 +293,29 @@ const getProjectSuggestions = TryCatch(async (req, res, next) => {
       suggestions,
     });
   });
+const getAllFreindsOtherThanProjectMembers=TryCatch(async(req,res,next)=>{
+  const {id}=req.params;
+  const project=await Project.findById(id);
+  if(!project){
+    return next(new ErrorHandler("Project not found",404));
+  }
+  const chats = await Chat.find({
+      members: req.user,
+      groupChat: false,
+    }).populate("members", "name avatar");
   
+    const friends = chats.map(({ members }) => {
+      const otherUser = getOtherMember(members, req.user);
+    });
+    const members = project.members;
+    const friendsNotInProject = friends.filter(
+      (friend) => !members.includes(friend._id.toString())
+    );
+    res.status(200).json({
+      success: true,
+      users: friendsNotInProject,
+    });
+});
 export {
     newProject,
     editProject,
@@ -302,5 +325,6 @@ export {
     getAllUserJoinedProjects,
     addMembersToProject,
     removeMemberFromProject,
-    getProjectSuggestions
+    getProjectSuggestions,
+    getAllFreindsOtherThanProjectMembers
 }

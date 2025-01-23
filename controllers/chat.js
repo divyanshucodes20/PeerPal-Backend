@@ -16,6 +16,7 @@ import { getOtherMember } from "../lib/helper.js";
 import { User } from "../models/user.js";
 import { Message } from "../models/message.js";
 import { Project } from "../models/project.js";
+import { Learner } from "../models/learner.js";
 
 const newGroupChat = TryCatch(async (req, res, next) => {
   const { name, members,isProject } = req.body;
@@ -130,6 +131,11 @@ const addMembers = TryCatch(async (req, res, next) => {
     const project=await Project.findById({groupChat:chatId});
     project.members.push(...uniqueMembers);
     await project.save();
+    if(project.learnerId){
+      const learner=await Learner.findById(project.learnerId);
+      learner.members.push(...uniqueMembers);
+      await learner.save();
+    }
   }
 
   const allUsersName = allNewMembers.map((i) => i.name).join(", ");
@@ -177,6 +183,11 @@ const removeMember = TryCatch(async (req, res, next) => {
     const project=await Project.findById({groupChat:chatId});
     project.members=project.members.filter(member=>member.toString()!==userId.toString());
     await project.save();
+    if(project.learnerId){
+      const learner=await Learner.findById(project.learnerId);
+      learner.members=learner.members.filter(member=>member.toString()!==userId.toString());
+      await learner.save();
+    }
   }
   await chat.save();
 
@@ -221,6 +232,11 @@ const leaveGroup = TryCatch(async (req, res, next) => {
     const project=await Project.find({groupChat:chatId});
     project.members=remainingMembers;
     await project.save();
+    if(project.learnerId){
+      const learner=await Learner.findById(project.learnerId);
+      learner.members=remainingMembers;
+      await learner.save();
+    }
   }
   const [user] = await Promise.all([
     User.findById(req.user, "name"),
@@ -338,7 +354,22 @@ const renameGroup = TryCatch(async (req, res, next) => {
     );
 
   chat.name = name;
-
+  if(chat.isProject){
+    const project=await Project.findById({groupChat:chatId});
+    if(!project){
+      return next(new ErrorHandler("Project not found",404));
+    }
+    project.name=name;
+    await project.save();
+    if(project.learnerId){
+      const learner=Learner.findById(project.learnerId);
+      if(!learner){
+        return next(new ErrorHandler("Learner Request not found",400))
+      }
+      learner.title=name;
+      await learner.save();
+    }
+  }
   await chat.save();
 
   emitEvent(req,ALERT,chat.members,{
@@ -394,7 +425,11 @@ const deleteChat = TryCatch(async (req, res, next) => {
   ]);
   if(chat.isProject){
     const project=await Project.find({groupChat:chatId});
-    await project.deleteOne();
+    if(project.learnerId){
+      const learner=await Learner.findById(project.learnerId);
+      await Learner.deleteOne(project.learnerId);
+    }
+    await Project.deleteOne(project._id);
   } 
   emitEvent(req, REFETCH_CHATS, members);
 
@@ -459,8 +494,19 @@ const changeAdmin=TryCatch(
     chat.creator=userId;
     if(chat.isProject){
       const project=await Project.findById({groupChat:chatId});
+      if(!project){
+        return next(new ErrorHandler("Project not found",404));
+      }
       project.creator=userId;
       await project.save();
+      if(project.learnerId){
+        const learner=await Learner.findById(project.learnerId);
+        if(!learner){
+          return next(new ErrorHandler("Learner Request not found",404))
+        }
+        learner.creator=userId;
+        await learner.save();
+      }
     }
     await chat.save();
     emitEvent(req,ALERT,chat.members,{
