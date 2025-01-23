@@ -67,6 +67,15 @@ const editProject=TryCatch(async(req,res,next)=>{
           return next(new ErrorHandler("You are not authorized to update this project",401));
     }
     const {name,type,teamSize}=req.body;
+    const learnerReq=null;
+    if(project.learnerId){
+      learnerReq=await Learner.findById(project.learnerId);
+      if(name)
+      learnerReq.title=name;
+      if(teamSize)
+      learnerReq.teamSize=teamSize;
+      await learnerReq.save();
+    }
     if(name){
         project.name=name;
     }
@@ -158,14 +167,14 @@ const editProject=TryCatch(async(req,res,next)=>{
       }
       res.status(200).json({
           success:true,
-          data:project
+          project
       })
   });
   const getAllUserProjects=TryCatch(async(req,res,next)=>{
       const projects=await Project.find({creator:req.user});
       res.status(200).json({
           success:true,
-          data:projects
+          projects
       })
   });
   
@@ -174,7 +183,7 @@ const editProject=TryCatch(async(req,res,next)=>{
       const projects=await Project.find({members:userId}).populate("creator","name avatar").populate("members","name avatar");
       res.status(200).json({
           success:true,
-          data:projects
+          projects
       })
   });
   const addMembersToProject=TryCatch(async(req,res,next)=>{
@@ -200,6 +209,16 @@ const editProject=TryCatch(async(req,res,next)=>{
         const user = await User.findById(member);
         if (!user) {
           return next(new ErrorHandler("User not found", 404));
+        }
+      }
+      if(project.members.length+members.length>project.teamSize){
+          return next(new ErrorHandler("Members can't be added more than team size",400));
+      }
+      if(project.learnerId){
+        const learner=await Learner.findById(project.learnerId);
+        if(learner){
+          learner.members.push(...members);
+          await learner.save();
         }
       }
       project.members.push(...members);
@@ -234,6 +253,16 @@ const editProject=TryCatch(async(req,res,next)=>{
     const {member}=req.body;
     if(!member){
         return next(new ErrorHandler("Please provide member to remove",400));
+    }
+    if(project.creator.toString()===member){
+        return next(new ErrorHandler("You can't remove project creator",400));
+    }
+    if(project.learnerId){
+      const learner=await Learner.findById(project.learnerId);
+      if(learner){
+        learner.members=learner.members.filter((m)=>m.toString()!==member.toString());
+        await learner.save();
+    }
     }
     project.members=project.members.filter((m)=>m.toString()!==member.toString());
     await project.save();

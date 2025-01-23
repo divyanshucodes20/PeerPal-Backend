@@ -81,6 +81,16 @@ const editLearnerRequest=TryCatch(async(req,res,next)=>{
           return next(new ErrorHandler("You are not authorized to update this request",401));
     }
     const { title,isProject,teamSize, description,contactNumber } = req.body;
+    if(learner.isProject){
+        const project=await Project.findOne({learnerId:id});
+        if(project){
+            if(title)
+            project.name=title;
+           if(teamSize)
+            project.teamSize=teamSize;
+            await project.save();
+        }
+    }
     if(title)
     learner.title=title;
     if(description)
@@ -160,14 +170,14 @@ const editLearnerRequest=TryCatch(async(req,res,next)=>{
       }
       res.status(200).json({
           success:true,
-          data:learner
+          learner
       })
   });
   const getAllUserLearnerRequests=TryCatch(async(req,res,next)=>{
       const learner=await Learner.find({creator:req.user});
       res.status(200).json({
           success:true,
-          data:learner
+          learners:learner
       })
   });
   const joinLearner=TryCatch(async(req,res,next)=>{
@@ -269,10 +279,55 @@ const editLearnerRequest=TryCatch(async(req,res,next)=>{
       const learners=await Learner.find({members:userId});
       res.status(200).json({
           success:true,
-          data:learners
+          learners
       })
   });
-
+  const linkReqToExistingProject=TryCatch(async(req,res,next)=>{
+    const {projectId}=req.body;
+    const {id}=req.params;
+    const project=await Project.findById(projectId);
+    if(!project){
+        return next(new ErrorHandler("Project not found",404));
+    }
+    if(project.creator.toString()!==req.user.toString()){
+        return next(new ErrorHandler("You are not authorized to link this project",401));
+    }
+    const learner=await Learner.findById(id);
+    if(!learner){
+        return next(new ErrorHandler("Learner Request not found",404));
+    }
+    if(project.learnerId){
+        return next(new ErrorHandler("Project already linked to a learner request",400));
+    }
+    if(learner.isProject){
+        return next(new ErrorHandler("Learner Request is already a project",400));
+    }
+    if(project.members.length>learner.teamSize){
+        return next(new ErrorHandler("Project members are more than learner team size",400));
+    }
+    if(project.creator.toString()!==learner.creator.toString()){
+        return next(new ErrorHandler("Project creator and learner creator should be same",400));
+    }
+    if(project.type!=="group"){
+        return next(new ErrorHandler("Project should be a group project",400));
+    }
+    const extraMembers=project.members.filter(member=>!learner.members.includes(member));
+    if(learner.members.length+extraMembers.length>learner.teamSize){
+        return next(new ErrorHandler("Increase team size to link to this project",400));
+    }
+    const extraMembersFromLearner=learner.members.filter(member=>!project.members.includes(member));
+    project.learnerId=id;
+    project.members.push(...extraMembersFromLearner);
+    project.teamSize=learner.teamSize;
+    await project.save();
+    learner.isProject=true;
+    learner.members.push(...extraMembers);
+    await learner.save();
+    res.status(200).json({
+        success:true,
+        message:"Project linked to learner request successfully",
+    })
+  });
 export {
 newLearnerRequest,
 editLearnerRequest,
@@ -281,5 +336,6 @@ getLearnerRequest,
 getAllUserLearnerRequests,
 getAllUserJoinedLearnerRequests,
 joinLearner,
-getAllLearners
+getAllLearners,
+linkReqToExistingProject,
 }
