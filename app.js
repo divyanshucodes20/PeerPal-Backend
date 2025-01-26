@@ -31,6 +31,7 @@ import roommateRoute from "./routes/roommate.js";
 import learnerRoute from "./routes/learner.js";
 import ProjectRoute from "./routes/project.js";
 import GoalRoute from "./routes/goals.js";
+import morgan from "morgan";
 
 dotenv.config({
   path: "./.env",
@@ -63,7 +64,9 @@ app.set("io", io);
 
 // Using Middlewares Here
 app.use(express.json());
+app.use(morgan("dev"));
 app.use(cookieParser());
+app.use(express.urlencoded({ extended: true }));
 app.use(cors(corsOptions));
 
 app.use("/api/v1/user", userRoute);

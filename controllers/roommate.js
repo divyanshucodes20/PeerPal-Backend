@@ -30,14 +30,14 @@ const getAllRoommates = TryCatch(
             }
         }
 
-      const roommatesPromise = Learner.find(baseQuery)
+      const roommatesPromise =Roommate.find(baseQuery)
         .sort(sort && { teamSize: sort === "asc" ? 1 : -1 })
         .limit(limit)
         .skip(skip);
   
       const [roommatesFetched, filteredOnlyRoommates] = await Promise.all([
         roommatesPromise.populate("creator", "name avatar"),
-        Learner.find(baseQuery).populate("creator", "name avatar"),
+        Roommate.find(baseQuery).populate("creator", "name avatar"),
       ]);
   
       const totalPage = Math.ceil(filteredOnlyRoommates.length / limit);
@@ -163,6 +163,13 @@ const joinRoommateRequest=TryCatch(async(req,res,next)=>{
         message:"Successfully Joined Roommate Request You can now chat with the creator",
     })
 });
+const getAllLocation=TryCatch(async(req,res,next)=>{
+    const locations=await Roommate.find().distinct("location");
+    res.status(200).json({
+        success:true,
+        locations
+    })
+});
 export {
     newRoommateRequest,
     editRoommateRequest,
@@ -170,5 +177,5 @@ export {
     getRoommateRequest,
     getAllUserRoommateRequests,
     joinRoommateRequest,
-    getAllRoommates
+    getAllRoommates,getAllLocation
 }

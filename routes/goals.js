@@ -6,10 +6,10 @@ const app = express.Router();
 
 app.use(isAuthenticated);
 app.post("/new",createGoal);
-app.get("/my",getUserAssignedGoals);
-app.get("/all",getProjectGoals);
-app.get("/completed",getProjectCompletedGoals);
-app.get("/pending",getProjectPendingGoals);
+app.get("/my/:id",getUserAssignedGoals);
+app.get("/all/:id",getProjectGoals);
+app.get("/completed/:id",getProjectCompletedGoals);
+app.get("/pending/:id",getProjectPendingGoals);
 app.put("/done/:id",markGoalAsCompleted);
 app.route("/:id").get(getGoal).put(updateGoal).delete(deleteGoal);
 

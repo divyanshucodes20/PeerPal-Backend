@@ -101,7 +101,7 @@ const updateGoal = TryCatch(async (req, res, next) => {
 });
 
 const getProjectGoals=TryCatch(async(req,res,next)=>{
-    const {projectId}=req.body;
+    const projectId=req.params.id;
     const project=await Project.findById(projectId);
     if(!project){
         return next(new ErrorHandler("Project not found",404));
@@ -140,7 +140,7 @@ const markGoalAsCompleted=TryCatch(async(req,res,next)=>{
     });
 });
 const getUserAssignedGoals=TryCatch(async(req,res,next)=>{
-    const {projectId}=req.body;
+    const projectId=req.params.id;
     const project=await Project.findById(projectId);
     if(!project){
         return next(new ErrorHandler("Project not found",404));
@@ -163,7 +163,7 @@ const getGoal=TryCatch(async(req,res,next)=>{
     });
 });
 const getProjectCompletedGoals=TryCatch(async(req,res,next)=>{
-const {projectId}=req.body;
+const projectId=req.params.id;
 const project=await Project.findById(projectId);
 if(!project){
     return next(new ErrorHandler("Project not found",404));
@@ -175,7 +175,7 @@ res.status(200).json({
 });
 });
 const getProjectPendingGoals=TryCatch(async(req,res,next)=>{
-    const {projectId}=req.body;
+    const projectId=req.params.id;
     const project=await Project.findById(projectId);
     if(!project){
         return next(new ErrorHandler("Project not found",404));
