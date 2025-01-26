@@ -9,18 +9,20 @@ import { ErrorHandler } from "../utils/utility.js";
 
 const getAllLearners = TryCatch(
     async (req, res, next) => {
-      const { search, sort, isProject } = req.query;
+      const { search, sort, isProject} = req.query;
       const page = Number(req.query.page) || 1;
       const limit = Number(process.env.REQUEST_PER_PAGE) || 10;
       const skip = (page - 1) * limit;
   
       const baseQuery= {};
   
-      if (search)
-        baseQuery.description = {
-          $regex: search,
-          $options: "i",
-        };
+      if (search) {
+        baseQuery.$or = [
+          { title: { $regex: search, $options: "i" } },
+          { description: { $regex: search, $options: "i" } },
+        ];
+      }
+      
       if (isProject !== undefined) baseQuery.isProject = isProject;
   
       const learnersPromise = Learner.find(baseQuery)
@@ -68,6 +70,7 @@ const newLearnerRequest = TryCatch(async (req, res, next) => {
     res.status(200).json({
         success: true,
         message: `Learner Request Created Successfully ${isProject?`and Project Created When other user joined it automitically create one Project Group`:``}`,
+        learner:learnerRequest,
     });
 });
 
@@ -164,7 +167,7 @@ const editLearnerRequest=TryCatch(async(req,res,next)=>{
   })
   const getLearnerRequest=TryCatch(async(req,res,next)=>{
       const id=req.params.id;
-      const learner=await Learner.findById(id).populate("creator","name avatar");
+      const learner=await Learner.findById(id).populate("creator","name avatar").populate("members","name avatar");
       if(!learner){
           return next(new ErrorHandler("Learner Request not found",404));
       }
@@ -227,7 +230,7 @@ const editLearnerRequest=TryCatch(async(req,res,next)=>{
         });
       }
       else if(learner.members.length>1 && learner.isProject){
-        const project=await Project.findOne({members:learner.members,creator:learner.creator,type:"group",name:learner.title});
+        const project=await Project.findOne({learnerId:id});
         if(!project){
             return next(new ErrorHandler("Project not found",404));
         }
@@ -284,6 +287,7 @@ const editLearnerRequest=TryCatch(async(req,res,next)=>{
   });
   const linkReqToExistingProject=TryCatch(async(req,res,next)=>{
     const {projectId}=req.body;
+    console.log(projectId);
     const {id}=req.params;
     const project=await Project.findById(projectId);
     if(!project){
@@ -319,6 +323,12 @@ const editLearnerRequest=TryCatch(async(req,res,next)=>{
     project.learnerId=id;
     project.members.push(...extraMembersFromLearner);
     project.teamSize=learner.teamSize;
+    const chat=await Chat.findById(project.groupChat);
+    if(!chat){
+        return next(new ErrorHandler("Chat not found",404));
+    }
+    chat.members.push(...extraMembersFromLearner);
+    await chat.save();
     await project.save();
     learner.isProject=true;
     learner.members.push(...extraMembers);

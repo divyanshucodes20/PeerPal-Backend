@@ -217,7 +217,20 @@ const getAllUserJoinedRides=TryCatch(async(req,res,next)=>{
         data:rides
     })
 });
-
+const getAllSource=TryCatch(async(req,res,next)=>{
+    const sources=await Ride.distinct("source");
+    res.status(200).json({
+        success:true,
+        sources
+    })
+});
+const getAllDestination=TryCatch(async(req,res,next)=>{
+    const destinations=await Ride.distinct("destination");
+    res.status(200).json({
+        success:true,
+        destinations
+    })
+});
 export {
     newRideRequest,
     editRideRequest,
@@ -227,4 +240,6 @@ export {
     joinRide,
     getAllUserJoinedRides,
     getAllRideRequests,
+    getAllSource,
+    getAllDestination
 }

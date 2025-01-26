@@ -53,14 +53,13 @@ const newUser = TryCatch(async (req, res, next) => {
 const verifyOTP = TryCatch(async (req, res, next) => {
   const { email, otp } = req.body;
 
-  const user = await User.findOne({ email });
+  const user = await User.findOne({ email }).select("+otp");
 
   if (!user) return next(new ErrorHandler("User not found!", 404));
-
   if (user.isVerified) {
     return res.status(400).json({ message: "User already verified!" });
   }
-
+  console.log(user.otp, otp);
   if (user.otp !== otp) {
     return next(new ErrorHandler("Invalid OTP!", 400));
   }
@@ -69,7 +68,6 @@ const verifyOTP = TryCatch(async (req, res, next) => {
   user.isVerified = true;
   user.otp = null;
   await user.save();
-
   sendToken(res, user, 200, "Email verified! You can now log in.");
 });
 // Login user and save token in cookie
