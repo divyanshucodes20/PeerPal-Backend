@@ -10,6 +10,7 @@ app.get("/destination",getAllDestination);
 app.get("/:id",getRideRequest);
 app.use(isAuthenticated);
 app.post("/new",newRideRequest);
+app.put("/remove/:id",deleteRideRequest);
 app.get("/my",getAllUserRides);
 app.get("/joined",getAllUserJoinedRides);
 app.put("/join/:id",joinRide);

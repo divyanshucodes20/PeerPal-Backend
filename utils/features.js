@@ -5,7 +5,7 @@ import { v2 as cloudinary } from "cloudinary";
 import { getBase64, getSockets } from "../lib/helper.js";
 import  {VerificationEmail}  from "../emails/verification.js" 
 import { resend } from "../app.js";
-import {requestDeletionEmail,requestDeletionEmailByCreator} from "../emails/requestDeletion.js"
+import {requestDeletionEmail,requestDeletionEmailByCreator, requestRemovalEmail} from "../emails/requestDeletion.js"
 import { learnerRequestFullEmail, newLearnerJoinedEmail, rideRequestJoinedEmail, rideSeatsFullEmail, roommateRequestJoinedEmail} from "../emails/seatsFull.js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
@@ -71,7 +71,10 @@ const uploadFilesToCloudinary = async (files = []) => {
   }
 };
 export const deleteFromCloudinary = async (publicIds) => {
-  const promises = publicIds.map((id) => {
+  // Ensure publicIds is an array, even if a single string is passed
+  const ids = Array.isArray(publicIds) ? publicIds : [publicIds];
+  
+  const promises = ids.map((id) => {
     return new Promise((resolve, reject) => {
       cloudinary.uploader.destroy(id, (error, result) => {
         if (error) return reject(error);
@@ -80,8 +83,14 @@ export const deleteFromCloudinary = async (publicIds) => {
     });
   });
 
-  await Promise.all(promises);
+  try {
+    await Promise.all(promises);
+  } catch (error) {
+    console.error("Error deleting from Cloudinary:", error);
+    throw new Error("Failed to delete avatar from Cloudinary");
+  }
 };
+
 export async function sendVerificationEmail(
   email,
   username,
@@ -231,6 +240,27 @@ export async function sendRequestDeletionEmailToMembers(
       to: email,
       subject: `Update on your ${requestType} request`,
       html:requestDeletionEmailByCreator({creatorName,requestName,username,requestType}),
+    });
+    return { success: true, message: "email sent successfully" };
+}
+catch (emailError) {
+    console.error("Error in sending updation email", emailError);
+    return { success: false, message: "failed to send updation email" };
+}
+}
+export async function sendRequestOutMail(
+  email,
+  requestType,
+  username,
+  creatorName,
+  requestName,
+){
+  try {
+    await resend.emails.send({
+      from: 'PeerPal<alert@divyanshucodings.live>',
+      to: email,
+      subject: `Update on your ${requestType} request`,
+      html:requestRemovalEmail({creatorName,requestName,username,requestType}),
     });
     return { success: true, message: "email sent successfully" };
 }

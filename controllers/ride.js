@@ -3,7 +3,7 @@ import { TryCatch } from "../middlewares/error.js";
 import { Chat } from "../models/chat.js";
 import { Ride } from "../models/ride.js";
 import { User } from "../models/user.js";
-import { emitEvent, sendRequestDeletionEmailToMembers, sendRideFullMail, sendRideJoinedMail } from "../utils/features.js";
+import { emitEvent, sendRequestDeletionEmailToMembers, sendRequestOutMail, sendRideFullMail, sendRideJoinedMail } from "../utils/features.js";
 import { ErrorHandler } from "../utils/utility.js";
 
 
@@ -231,6 +231,34 @@ const getAllDestination=TryCatch(async(req,res,next)=>{
         destinations
     })
 });
+const removeMemberFromRide=TryCatch(async(req,res,next)=>{
+    const {id}=req.params;
+    const {userId}=req.body;
+    const ride=await Ride.findById(id);
+    if(!ride){
+        return next(new ErrorHandler("Ride Request not found",404));
+    }
+    if(ride.creator.toString()!==req.user.toString()){
+        return next(new ErrorHandler("You are not authorized to remove member from this ride",401));
+    }
+    const user=await User.findById(userId);
+    if(!user){
+        return next(new ErrorHandler("User not found",404));
+    }
+    if(!ride.members.includes(userId)){
+        return next(new ErrorHandler("User is not part of this ride",400));
+    }
+    ride.members=ride.members.filter(member=>member.toString()!==userId);
+    await ride.save();
+    if(ride.date>Date.now()){
+        const creator=await User.findById(ride.creator);
+        sendRequestOutMail(user.email,"Ride",user.name,creator.name,ride.source+"to"+ride.destination);
+    }
+    res.status(200).json({
+        success:true,
+        message:"User removed from the ride successfully"
+    });
+});
 export {
     newRideRequest,
     editRideRequest,
@@ -241,5 +269,6 @@ export {
     getAllUserJoinedRides,
     getAllRideRequests,
     getAllSource,
-    getAllDestination
+    getAllDestination,
+    removeMemberFromRide
 }

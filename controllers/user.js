@@ -7,6 +7,7 @@ import { Request } from "../models/request.js";
 import { User } from "../models/user.js";
 import {
   cookieOptions,
+  deleteFromCloudinary,
   emitEvent,
   sendToken,
   sendVerificationEmail,
@@ -262,6 +263,44 @@ const getMyFriends = TryCatch(async (req, res) => {
     });
   }
 });
+const editProfile = TryCatch(async (req, res, next) => {
+  try {
+    const { name, password } = req.body;
+    const { avatar } = req.file||{} ;
+
+    const user = await User.findById(req.user);
+    if (!user) {
+      return next(new ErrorHandler("User not found", 404));
+    }
+
+    if (name) user.name = name;
+    if (password) user.password = password;
+    if(avatar){
+    await deleteFromCloudinary(user.avatar.public_id);
+
+    const result = await uploadFilesToCloudinary([avatar]);
+
+    if (!result || !result[0]) {
+      return next(new ErrorHandler("File upload failed", 500));
+    }
+
+    user.avatar = {
+      public_id: result[0].public_id,
+      url: result[0].url,
+    };
+  }
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Profile Updated Successfully",
+    });
+  } catch (error) {
+    console.error("Error in editProfile:", error);
+    next(error);
+  }
+});
+
 
 export {
   acceptFriendRequest,
@@ -273,5 +312,6 @@ export {
   newUser,
   searchUser,
   sendFriendRequest,
-  verifyOTP
+  verifyOTP,
+  editProfile
 };

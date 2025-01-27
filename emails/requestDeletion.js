@@ -50,5 +50,31 @@ export function requestDeletionEmailByCreator({ creatorName, requestName,usernam
         </html>
     `;
 }
+export function requestRemovalEmail({ creatorName, requestName, username, requestType }) {
+    return `
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+                <h2 style="color: #f0ad4e;">⚠️ You Have Been Removed: ${requestType} - ${requestName}</h2>
+                
+                <p>Dear ${username},</p>
+                
+                <p>We regret to inform you that <strong>${creatorName}</strong> has removed you from the ${requestType} <strong>"${requestName}"</strong>.</p>
+                
+                <p>If you would like to understand the reason behind this action, we suggest you reach out to <strong>${creatorName}</strong> directly for further clarification.</p>
+                
+                <p>We value your participation and encourage you to stay engaged with the platform for new opportunities.</p>
+                
+                <p>If you need further assistance, please don't hesitate to contact our support team.</p>
+
+                <p>Best Regards,</p>
+                <p><strong>The PeerPal Team</strong></p>
+                <hr style="border: none; border-top: 1px solid #ddd;">
+                <p style="font-size: 12px; color: #777;">For more details, you can contact us through our website's Contact Us section.</p>
+            </div>
+        </body>
+        </html>
+    `;
+}
 
 

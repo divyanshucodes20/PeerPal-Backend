@@ -6,7 +6,7 @@ import { Goal } from "../models/goal.js";
 import { Learner } from "../models/learner.js";
 import { Project } from "../models/project.js";
 import { User } from "../models/user.js";
-import { emitEvent, generateProjectSuggestions, sendRequestDeletionEmailToMembers } from "../utils/features.js";
+import { emitEvent, generateProjectSuggestions, sendRequestDeletionEmailToMembers, sendRequestOutMail } from "../utils/features.js";
 import { ErrorHandler } from "../utils/utility.js";
 
 
@@ -252,6 +252,7 @@ const editProject=TryCatch(async(req,res,next)=>{
         return next(new ErrorHandler("You can't remove all members from project",400));
     }
     const {member}=req.body;
+    const user=await User.findById(member);
     if(!member){
         return next(new ErrorHandler("Please provide member to remove",400));
     }
@@ -267,6 +268,8 @@ const editProject=TryCatch(async(req,res,next)=>{
     }
     project.members=project.members.filter((m)=>m.toString()!==member.toString());
     await project.save();
+    const creator=await User.findById(project.creator);
+    sendRequestOutMail(user.email,"Project",user.name,creator.name,project.name);
     const chat = await Chat.findById(project.groupChat);
     chat.members=chat.members.filter((m)=>m.toString()!==member.toString());
     emitEvent(req, REFETCH_CHATS, chat.members,{

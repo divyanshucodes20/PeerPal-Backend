@@ -1,6 +1,7 @@
 import express from "express";
 import {
   acceptFriendRequest,
+  editProfile,
   getMyFriends,
   getMyNotifications,
   getMyProfile,
@@ -34,6 +35,7 @@ app.post("/verify", verifyOTP);
 app.use(isAuthenticated);
 
 app.get("/me", getMyProfile);
+app.put("/edit", singleAvatar, editProfile);
 
 app.get("/logout", logout);
 
