@@ -1,4 +1,5 @@
 import { REFETCH_CHATS } from "../constants/events.js";
+import { getOtherMember } from "../lib/helper.js";
 import { TryCatch } from "../middlewares/error.js";
 import { Chat } from "../models/chat.js";
 import { Ride } from "../models/ride.js";
@@ -259,6 +260,44 @@ const removeMemberFromRide=TryCatch(async(req,res,next)=>{
         message:"User removed from the ride successfully"
     });
 });
+const friendsOtherThanRideMembers = TryCatch(async (req, res, next) => {
+    const { id } = req.params;
+    const ride = await Ride.findById(id);
+    
+    if (!ride) {
+      return next(new ErrorHandler("Ride Request not found", 404));
+    }
+  
+    const chats = await Chat.find({
+      members: req.user,
+      groupChat: false,
+    }).populate("members", "name avatar");
+  
+    const friendsSet = new Map();
+  
+    chats.forEach(({ members }) => {
+      const otherUser = getOtherMember(members, req.user);
+  
+      if (!friendsSet.has(otherUser._id.toString())) {
+        friendsSet.set(otherUser._id.toString(), {
+          _id: otherUser._id,
+          name: otherUser.name,
+          avatar: otherUser.avatar.url,
+        });
+      }
+    });
+  
+    const friends = Array.from(friendsSet.values());
+    
+    const currentMembers = ride.members.map((member) => member.toString());
+    const availableFriends = friends.filter(friend => !currentMembers.includes(friend._id.toString()));
+  
+    return res.status(200).json({
+      success: true,
+      friends: availableFriends,
+    });
+  });
+  
 export {
     newRideRequest,
     editRideRequest,
@@ -270,5 +309,6 @@ export {
     getAllRideRequests,
     getAllSource,
     getAllDestination,
-    removeMemberFromRide
+    removeMemberFromRide,
+    friendsOtherThanRideMembers
 }

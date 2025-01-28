@@ -1,6 +1,6 @@
 import express from "express";
 import { isAuthenticated } from "../middlewares/auth.js";
-import {deleteLearnerRequest, editLearnerRequest, getAllLearners, getAllUserJoinedLearnerRequests, getAllUserLearnerRequests, getLearnerRequest, joinLearner, newLearnerRequest,linkReqToExistingProject, addMemberToLearner, removeMemberFromLearner} from "../controllers/learner.js";
+import {deleteLearnerRequest, editLearnerRequest, getAllLearners, getAllUserJoinedLearnerRequests, getAllUserLearnerRequests, getLearnerRequest, joinLearner, newLearnerRequest,linkReqToExistingProject, addMemberToLearner, removeMemberFromLearner, freindsOtherThanLearnerMembers} from "../controllers/learner.js";
 
 const app = express.Router();
 
@@ -14,6 +14,7 @@ app.put("/join/:id",joinLearner);
 app.put("/link/:id",linkReqToExistingProject)
 app.put("/add/:id",addMemberToLearner);
 app.put("/remove/:id",removeMemberFromLearner);
+app.get("/other-members/:id",freindsOtherThanLearnerMembers);
 app.route("/:id").put(editLearnerRequest).delete(deleteLearnerRequest)
 
 export default app;

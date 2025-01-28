@@ -235,34 +235,43 @@ const getMyFriends = TryCatch(async (req, res) => {
     groupChat: false,
   }).populate("members", "name avatar");
 
-  const friends = chats.map(({ members }) => {
+  const friendsSet = new Map();
+
+  chats.forEach(({ members }) => {
     const otherUser = getOtherMember(members, req.user);
 
-    return {
-      _id: otherUser._id,
-      name: otherUser.name,
-      avatar: otherUser.avatar.url,
-    };
+    if (!friendsSet.has(otherUser._id.toString())) {
+      friendsSet.set(otherUser._id.toString(), {
+        _id: otherUser._id,
+        name: otherUser.name,
+        avatar: otherUser.avatar?.url || "", // Handle missing avatar safely
+      });
+    }
   });
+
+  const friends = Array.from(friendsSet.values());
 
   if (chatId) {
     const chat = await Chat.findById(chatId);
+    if (!chat) {
+      return res.status(404).json({ success: false, message: "Chat not found" });
+    }
 
-    const availableFriends = friends.filter(
-      (friend) => !chat.members.includes(friend._id)
-    );
+    const chatMemberIds = new Set(chat.members.map((member) => member.toString())); // Use Set for faster lookups
+    const availableFriends = friends.filter(friend => !chatMemberIds.has(friend._id.toString()));
 
     return res.status(200).json({
       success: true,
       friends: availableFriends,
     });
-  } else {
-    return res.status(200).json({
-      success: true,
-      friends,
-    });
   }
+
+  return res.status(200).json({
+    success: true,
+    friends,
+  });
 });
+
 const editProfile = TryCatch(async (req, res, next) => {
   try {
     const { name, password } = req.body;

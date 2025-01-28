@@ -1,4 +1,5 @@
 import { REFETCH_CHATS } from "../constants/events.js";
+import { getOtherMember } from "../lib/helper.js";
 import {TryCatch} from "../middlewares/error.js";
 import { Chat } from "../models/chat.js";
 import { Learner } from "../models/learner.js";
@@ -409,6 +410,44 @@ const editLearnerRequest=TryCatch(async(req,res,next)=>{
         message:"Member removed successfully",
     })
   });
+  const freindsOtherThanLearnerMembers = TryCatch(async (req, res, next) => {
+    const { id } = req.params;
+    const learner = await Learner.findById(id);
+  
+    if (!learner) {
+      return next(new ErrorHandler("Learner Request not found", 404));
+    }
+  
+    const chats = await Chat.find({
+      members: req.user,
+      groupChat: false,
+    }).populate("members", "name avatar");
+  
+    const friendsSet = new Map();
+  
+    chats.forEach(({ members }) => {
+      const otherUser = getOtherMember(members, req.user);
+  
+      if (!friendsSet.has(otherUser._id.toString())) {
+        friendsSet.set(otherUser._id.toString(), {
+          _id: otherUser._id,
+          name: otherUser.name,
+          avatar: otherUser.avatar?.url || "", // Handle missing avatar safely
+        });
+      }
+    });
+  
+    const friends = Array.from(friendsSet.values());
+  
+    const currentMembers = learner.members.map((member) => member.toString());
+    const availableFriends = friends.filter(friend => !currentMembers.includes(friend._id.toString()));
+  
+    return res.status(200).json({
+      success: true,
+      friends: availableFriends,
+    });
+  });
+  
 export {
 newLearnerRequest,
 editLearnerRequest,
@@ -421,4 +460,5 @@ getAllLearners,
 linkReqToExistingProject,
 addMemberToLearner,
 removeMemberFromLearner,
+freindsOtherThanLearnerMembers,
 }

@@ -296,29 +296,43 @@ const getProjectSuggestions = TryCatch(async (req, res, next) => {
       suggestions,
     });
   });
-const getAllFreindsOtherThanProjectMembers=TryCatch(async(req,res,next)=>{
-  const {id}=req.params;
-  const project=await Project.findById(id);
-  if(!project){
-    return next(new ErrorHandler("Project not found",404));
-  }
-  const chats = await Chat.find({
+  const getAllFreindsOtherThanProjectMembers = TryCatch(async (req, res, next) => {
+    const { id } = req.params;
+    const project = await Project.findById(id);
+    if (!project) {
+      return next(new ErrorHandler("Project not found", 404));
+    }
+  
+    const chats = await Chat.find({
       members: req.user,
       groupChat: false,
     }).populate("members", "name avatar");
   
-    const friends = chats.map(({ members }) => {
+    const friendsSet = new Map();
+  
+    chats.forEach(({ members }) => {
       const otherUser = getOtherMember(members, req.user);
+  
+      if (!friendsSet.has(otherUser._id.toString())) {
+        friendsSet.set(otherUser._id.toString(), {
+          _id: otherUser._id,
+          name: otherUser.name,
+          avatar: otherUser.avatar.url,
+        });
+      }
     });
-    const members = project.members;
-    const friendsNotInProject = friends.filter(
-      (friend) => !members.includes(friend._id.toString())
-    );
+  
+    const friends = Array.from(friendsSet.values());
+  
+    const members = project.members.map((member) => member.toString());
+    const friendsNotInProject = friends.filter((friend) => !members.includes(friend._id.toString()));
+  
     res.status(200).json({
       success: true,
-      users: friendsNotInProject,
+      friends: friendsNotInProject,
     });
-});
+  });
+  
 export {
     newProject,
     editProject,
