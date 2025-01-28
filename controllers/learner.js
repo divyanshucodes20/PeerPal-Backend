@@ -4,7 +4,7 @@ import { Chat } from "../models/chat.js";
 import { Learner } from "../models/learner.js";
 import {Project} from "../models/project.js";
 import { User } from "../models/user.js";
-import { emitEvent, sendLearnerJoinedMail, sendLearnerRequestFullMail } from "../utils/features.js";
+import { emitEvent, sendLearnerJoinedMail, sendLearnerRequestFullMail, sendRequestOutMail } from "../utils/features.js";
 import { ErrorHandler } from "../utils/utility.js";
 
 const getAllLearners = TryCatch(
@@ -171,9 +171,18 @@ const editLearnerRequest=TryCatch(async(req,res,next)=>{
       if(!learner){
           return next(new ErrorHandler("Learner Request not found",404));
       }
+      const groupChat=null;
+      if(learner.isProject){
+        const project=await Project.findOne({learnerId:id});
+        if(!project){
+            return next(new ErrorHandler("Project not found",404));
+        }
+        groupChat=project.groupChat;
+      }
       res.status(200).json({
           success:true,
-          learner
+          learner,
+            groupChat,
       })
   });
   const getAllUserLearnerRequests=TryCatch(async(req,res,next)=>{
@@ -338,6 +347,68 @@ const editLearnerRequest=TryCatch(async(req,res,next)=>{
         message:"Project linked to learner request successfully",
     })
   });
+  const addMemberToLearner=TryCatch(async(req,res,next)=>{
+    const {id}=req.params;
+    const learner=await Learner.findById(id);
+    if(!learner){
+        return next(new ErrorHandler("Learner Request not found",404));
+    }
+    if(learner.isProject){
+        return next(new ErrorHandler("You can add members in request instead add in project",400));
+    }
+    if(learner.creator.toString()!==req.user.toString()){
+        return next(new ErrorHandler("You are not authorized to add member to this request",401));
+    }
+    const {members}=req.body;
+    if(!members){
+        return next(new ErrorHandler("Members are required",400));
+    }
+    if(learner.members.length+members.length>learner.teamSize){
+        return next(new ErrorHandler("Members are more than team size",400));
+    }
+    const existingMembers=learner.members;
+    const allMembers=[...existingMembers,...members];
+    learner.members=allMembers;
+    await learner.save();
+    res.status(200).json({
+        success:true,
+        message:"Members added successfully",
+    })
+  });
+  const removeMemberFromLearner=TryCatch(async(req,res,next)=>{
+    const {id}=req.params;
+    const learner=await Learner.findById(id);
+    if(!learner){
+        return next(new ErrorHandler("Learner Request not found",404));
+    }
+    if(learner.isProject){
+        return next(new ErrorHandler("You can remove members in request instead remove in project",400));
+    }
+    if(learner.creator.toString()!==req.user.toString()){
+        return next(new ErrorHandler("You are not authorized to remove member from this request",401));
+    }
+    const {member}=req.body;
+    if(!member){
+        return next(new ErrorHandler("Member is required",400));
+    }
+    const user=await User.findById(member);
+    if(!user){
+        return next(new ErrorHandler("User not found",404));
+    }
+    if(!learner.members.includes(member)){
+        return next(new ErrorHandler("Member not found in request",400));
+    }
+    const existingMembers=learner.members;
+    const allMembers=existingMembers.filter(m=>m.toString()!==member.toString());
+    learner.members=allMembers;
+    await learner.save();
+    const creator=await User.findById(learner.creator);
+    sendRequestOutMail(user.email,"Learner",user.name,creator.name,learner.title);
+    res.status(200).json({
+        success:true,
+        message:"Member removed successfully",
+    })
+  });
 export {
 newLearnerRequest,
 editLearnerRequest,
@@ -348,4 +419,6 @@ getAllUserJoinedLearnerRequests,
 joinLearner,
 getAllLearners,
 linkReqToExistingProject,
+addMemberToLearner,
+removeMemberFromLearner,
 }
