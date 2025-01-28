@@ -5,7 +5,7 @@ import { v2 as cloudinary } from "cloudinary";
 import { getBase64, getSockets } from "../lib/helper.js";
 import  {VerificationEmail}  from "../emails/verification.js" 
 import { resend } from "../app.js";
-import {requestDeletionEmail,requestDeletionEmailByCreator, requestRemovalEmail} from "../emails/requestDeletion.js"
+import {requestDeletionEmail,requestDeletionEmailByCreator, requestRemovalEmail, userLeftRequestEmail} from "../emails/requestDeletion.js"
 import { learnerRequestFullEmail, newLearnerJoinedEmail, rideRequestJoinedEmail, rideSeatsFullEmail, roommateRequestJoinedEmail} from "../emails/seatsFull.js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
@@ -311,6 +311,27 @@ export async function generateProjectSuggestions(project, goals) {
     ];
   }
 }
+export async function sendUserLeftMailToCreator(
+  email,
+  requestType,
+  username,
+  creatorName,
+  requestName,
+){
+  try {
+    await resend.emails.send({
+      from: 'PeerPal<alert@divyanshucodings.live>',
+      to: email,
+      subject: `Update on your ${requestType} request`,
+      html:userLeftRequestEmail({creatorName,requestName,requestType,username}),
+    });   
+    return { success: true, message: "email sent successfully" };
+}
+catch (emailError) {
+    console.error("Error in sending updation email", emailError);
+    return { success: false, message: "failed to send updation email" };
+}
+}  
 
 export {
   connectDB,

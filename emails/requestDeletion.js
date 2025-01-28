@@ -76,5 +76,32 @@ export function requestRemovalEmail({ creatorName, requestName, username, reques
         </html>
     `;
 }
+export function userLeftRequestEmail({ creatorName, requestName, username, requestType }) {
+    return `
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+                <h2 style="color: #5bc0de;">ℹ️ User Left: ${requestType} - ${requestName}</h2>
+                
+                <p>Dear ${creatorName},</p>
+                
+                <p>We wanted to inform you that <strong>${username}</strong> has voluntarily left the ${requestType} <strong>"${requestName}"</strong>.</p>
+                
+                <p>If you believe this was unintended or would like to reach out, you may contact the user directly.</p>
+                
+                <p>We encourage you to continue managing your requests effectively and appreciate your engagement on PeerPal.</p>
+                
+                <p>For any assistance, feel free to contact our support team.</p>
+
+                <p>Best Regards,</p>
+                <p><strong>The PeerPal Team</strong></p>
+                <hr style="border: none; border-top: 1px solid #ddd;">
+                <p style="font-size: 12px; color: #777;">For more details, you can contact us through our website's Contact Us section.</p>
+            </div>
+        </body>
+        </html>
+    `;
+}
+
 
 

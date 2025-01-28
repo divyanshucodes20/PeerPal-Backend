@@ -1,6 +1,6 @@
 import express from "express";
 import { isAuthenticated } from "../middlewares/auth.js";
-import {newProject,editProject,deleteProject,getAllUserJoinedProjects,getAllUserProjects,getProjectDetails,addMembersToProject,removeMemberFromProject, getProjectSuggestions, getAllFreindsOtherThanProjectMembers} from "../controllers/project.js";
+import {newProject,editProject,deleteProject,getAllUserJoinedProjects,getAllUserProjects,getProjectDetails,addMembersToProject,removeMemberFromProject, getProjectSuggestions, getAllFreindsOtherThanProjectMembers, leaveProject} from "../controllers/project.js";
 
 const app = express.Router();
 
@@ -12,6 +12,7 @@ app.get("/joined",getAllUserJoinedProjects);
 app.put("/add/:id",addMembersToProject);
 app.put("/remove/:id",removeMemberFromProject);
 app.get("/other-members/:id",getAllFreindsOtherThanProjectMembers);
+app.put("/leave/:id",leaveProject);
 app.route("/:id").put(editProject).delete(deleteProject).get(getProjectDetails);
 
 export default app;

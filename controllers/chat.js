@@ -4,7 +4,8 @@ import { Chat } from "../models/chat.js";
 import {
   emitEvent,
   uploadFilesToCloudinary,
-  deleteFromCloudinary
+  deleteFromCloudinary,
+  sendUserLeftMailToCreator
 } from "../utils/features.js";
 import {
   ALERT,
@@ -222,26 +223,32 @@ const leaveGroup = TryCatch(async (req, res, next) => {
     return next(new ErrorHandler("Group must have at least 3 members", 400));
 
   if (chat.creator.toString() === req.user.toString()) {
-    const randomElement = Math.floor(Math.random() * remainingMembers.length);
-    const newCreator = remainingMembers[randomElement];
-    chat.creator = newCreator;
+    return next(new ErrorHandler("make someone else admin to leave this chat", 400));
   }
 
   chat.members = remainingMembers;
-  if(chat.isProject){
-    const project=await Project.find({groupChat:chatId});
-    project.members=remainingMembers;
-    await project.save();
-    if(project.learnerId){
-      const learner=await Learner.findById(project.learnerId);
-      learner.members=remainingMembers;
-      await learner.save();
-    }
-  }
   const [user] = await Promise.all([
     User.findById(req.user, "name"),
     chat.save(),
   ]);
+  if(chat.isProject){
+    const project=await Project.find({groupChat:chatId});
+    if(!project){
+      return next(new ErrorHandler("Project not found",404));
+    }
+    const creator=await User.findById(project.creator);
+    project.members=remainingMembers;
+    await project.save();
+    sendUserLeftMailToCreator(creator.email,"Project",user.name,project.name,project.name);
+    if(project.learnerId){
+      const learner=await Learner.findById(project.learnerId);
+      if(!learner){
+        return next(new ErrorHandler("Learner Request not found",400))
+      }
+      learner.members=remainingMembers;
+      await learner.save();
+    }
+  }
 
   emitEvent(req, ALERT, chat.members, {
     chatId,

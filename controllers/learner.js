@@ -448,6 +448,52 @@ const editLearnerRequest=TryCatch(async(req,res,next)=>{
     });
   });
   
+  const leaveLearner=TryCatch(async(req,res,next)=>{
+    const {id}=req.params;
+    const learner=await Learner.findById(id);
+    if(!learner){
+        return next(new ErrorHandler("Project not found",404));
+    }
+    if(learner.creator.toString()===req.user.toString()){
+        return next(new ErrorHandler("Make someone else admin of this project from chat to leave project",400));
+    }
+    if(learner.members.length<=1){
+        return next(new ErrorHandler("You can delete this project instead of leaving it",400));
+    }
+    const user=await User.findById(req.user);
+    const creator=await User.findById(learner.creator);
+    learner.members=learner.members.filter(member=>member.toString()!==req.user.toString());
+    sendUserLeftMailToCreator(creator.email,"Learner",user.name,creator.name,learner.title);
+    if(learner.isProject){
+        const project=await Project.findOne({learnerId:id});
+        if(!project){
+            return next(new ErrorHandler("Project not found",404));
+        }
+        if(project.creator.toString()===req.user.toString()){
+            return next(new ErrorHandler("Make someone else admin of this project from chat to leave project",400));
+        }
+        if(project.members.length<=1){
+            return next(new ErrorHandler("You can delete this project instead of leaving it",400));
+        }
+        project.members=project.members.filter(member=>member.toString()!==req.user.toString());
+        const chat=await Chat.findById(project.groupChat);
+        if(!chat){
+            return next(new ErrorHandler("Chat not found",404));
+        }
+        chat.members=chat.members.filter(member=>member.toString()!==req.user.toString());
+        emitEvent(req, REFETCH_CHATS, project.members,{
+            message:`${user.name} has left the project group`,
+            chatId:chat._id,
+        });
+        await chat.save();
+        await project.save();
+    }
+    await learner.save();
+    res.status(200).json({
+        success:true,
+        message:"You left learner request successfully",
+    })
+  });
 export {
 newLearnerRequest,
 editLearnerRequest,
@@ -461,4 +507,5 @@ linkReqToExistingProject,
 addMemberToLearner,
 removeMemberFromLearner,
 freindsOtherThanLearnerMembers,
+leaveLearner,
 }

@@ -297,7 +297,31 @@ const friendsOtherThanRideMembers = TryCatch(async (req, res, next) => {
       friends: availableFriends,
     });
   });
-  
+  const leaveRide=TryCatch(async(req,res,next)=>{
+    const {id}=req.params;
+    const ride=await Ride.findById(id);
+    if(!ride){
+        return next(new ErrorHandler("Ride not found",404));
+    }
+    if(ride.creator.toString()===req.user.toString()){
+        return next(new ErrorHandler("Make someone else admin of this project from chat to leave project",400));
+    }
+    if(ride.type!=="group"){
+        return next(new ErrorHandler("You can't leave self project",400));
+    }
+    if(ride.members.length<=1){
+        return next(new ErrorHandler("You can delete this project instead of leaving it",400));
+    }
+    const user=await User.findById(req.user);
+    const creator=await User.findById(ride.creator);
+    ride.members=project.members.filter((m)=>m.toString()!==req.user.toString());
+    sendUserLeftMailToCreator(creator.email,"Ride",user.name,creator.name,ride.source+"to"+ride.destination+"ride");
+    await ride.save();
+    res.status(200).json({
+        success:true,
+        message:"You left ride successfully",
+    })
+  });
 export {
     newRideRequest,
     editRideRequest,
@@ -310,5 +334,6 @@ export {
     getAllSource,
     getAllDestination,
     removeMemberFromRide,
-    friendsOtherThanRideMembers
+    friendsOtherThanRideMembers,
+    leaveRide
 }

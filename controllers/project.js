@@ -6,7 +6,7 @@ import { Goal } from "../models/goal.js";
 import { Learner } from "../models/learner.js";
 import { Project } from "../models/project.js";
 import { User } from "../models/user.js";
-import { emitEvent, generateProjectSuggestions, sendRequestDeletionEmailToMembers, sendRequestOutMail } from "../utils/features.js";
+import { emitEvent, generateProjectSuggestions, sendRequestDeletionEmailToMembers, sendRequestOutMail, sendUserLeftMailToCreator } from "../utils/features.js";
 import { ErrorHandler } from "../utils/utility.js";
 
 
@@ -332,6 +332,38 @@ const getProjectSuggestions = TryCatch(async (req, res, next) => {
       friends: friendsNotInProject,
     });
   });
+  const leaveProject=TryCatch(async(req,res,next)=>{
+    const {id}=req.params;
+    const project=await Project.findById(id);
+    if(!project){
+        return next(new ErrorHandler("Project not found",404));
+    }
+    if(project.creator.toString()===req.user.toString()){
+        return next(new ErrorHandler("Make someone else admin of this project from chat to leave project",400));
+    }
+    if(project.type!=="group"){
+        return next(new ErrorHandler("You can't leave self project",400));
+    }
+    if(project.members.length<=1){
+        return next(new ErrorHandler("You can delete this project instead of leaving it",400));
+    }
+    const user=await User.findById(req.user);
+    const creator=await User.findById(project.creator);
+    const chat = await Chat.findById(project.groupChat);
+    chat.members=chat.members.filter((m)=>m.toString()!==req.user.toString());
+    await chat.save();
+    project.members=project.members.filter((m)=>m.toString()!==req.user.toString());
+    emitEvent(req, REFETCH_CHATS, chat.members,{
+        message:`${user.name} left project group`,
+        chatId:chat._id,
+    });
+    sendUserLeftMailToCreator(creator.email,"Project",user.name,creator.name,project.name);
+    await project.save();
+    res.status(200).json({
+        success:true,
+        message:"You left project successfully",
+    })
+  });
   
 export {
     newProject,
@@ -343,5 +375,5 @@ export {
     addMembersToProject,
     removeMemberFromProject,
     getProjectSuggestions,
-    getAllFreindsOtherThanProjectMembers
+    leaveProject,
 }
