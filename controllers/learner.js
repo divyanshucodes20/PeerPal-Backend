@@ -209,7 +209,7 @@ const editLearnerRequest=TryCatch(async(req,res,next)=>{
       if(learner.teamSize<=0){
           return next(new ErrorHandler("No seats available",400));
       }
-      if(learner.creator===userId){
+      if(learner.creator.toString()===req.user.toString()){
           return next(new ErrorHandler("You can't join your own request",400));
       }
       learner.members.push(userId);

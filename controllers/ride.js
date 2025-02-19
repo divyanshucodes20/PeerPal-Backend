@@ -178,7 +178,7 @@ const joinRide=TryCatch(async(req,res,next)=>{
     if(ride.members.includes(userId)){
         return next(new ErrorHandler("You have already joined this ride",400));
     }
-    if(ride.creator===userId){
+    if(ride.creator.toString()===req.user.toString()){
         return next(new ErrorHandler("You can't join your own ride",400));
     }
     if(ride.date<Date.now()){

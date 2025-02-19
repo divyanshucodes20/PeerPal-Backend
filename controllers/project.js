@@ -302,18 +302,16 @@ const getProjectSuggestions = TryCatch(async (req, res, next) => {
     if (!project) {
       return next(new ErrorHandler("Project not found", 404));
     }
-  
     const chats = await Chat.find({
       members: req.user,
       groupChat: false,
     }).populate("members", "name avatar");
-  
     const friendsSet = new Map();
   
     chats.forEach(({ members }) => {
       const otherUser = getOtherMember(members, req.user);
   
-      if (!friendsSet.has(otherUser._id.toString())) {
+      if (otherUser && !friendsSet.has(otherUser._id.toString())) {
         friendsSet.set(otherUser._id.toString(), {
           _id: otherUser._id,
           name: otherUser.name,
@@ -321,7 +319,6 @@ const getProjectSuggestions = TryCatch(async (req, res, next) => {
         });
       }
     });
-  
     const friends = Array.from(friendsSet.values());
   
     const members = project.members.map((member) => member.toString());
@@ -331,7 +328,7 @@ const getProjectSuggestions = TryCatch(async (req, res, next) => {
       success: true,
       friends: friendsNotInProject,
     });
-  });
+});
   const leaveProject=TryCatch(async(req,res,next)=>{
     const {id}=req.params;
     const project=await Project.findById(id);
@@ -376,4 +373,5 @@ export {
     removeMemberFromProject,
     getProjectSuggestions,
     leaveProject,
+    getAllFreindsOtherThanProjectMembers
 }
